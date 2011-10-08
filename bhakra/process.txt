@@ -1,0 +1,18 @@
+1. Compile elements of Taudem:
+cd ../../taudem/src
+make ../pitremove
+cd shape
+make
+cd ..
+make ../d8flowdir
+make ../dinfflowdir
+
+2. cvt.sh
+3. ../../taudem/pitremove final.tiff
+4. ../../taudem/d8flowdir final.tiff
+5. ../../taudem/aread8 final.tiff
+
+4. ../../taudem/dinfflowdir final.tiff
+5. ../../taudem/areadinf final.tiff
+
+TODO: create shape file of outlet

@@ -1,0 +1,27 @@
+Geotiff_Information:
+   Version: 1
+   Key_Revision: 1.0
+   Tagged_Information:
+      ModelTiepointTag (2,3):
+         0                0                0                
+         74.7666702       33.9166679       0                
+      ModelPixelScaleTag (1,3):
+         0.00833333377    0.00833333377    0                
+      End_Of_Tags.
+   Keyed_Information:
+      GTModelTypeGeoKey (Short,1): Undefined
+      GTRasterTypeGeoKey (Short,1): Undefined
+      GeographicTypeGeoKey (Short,1): Undefined
+      GeogLinearUnitsGeoKey (Short,1): Undefined
+      GeogAngularUnitsGeoKey (Short,1): Undefined
+      End_Of_Keys.
+   End_Of_Geotiff.
+
+GCS: 0/(unknown)
+
+Corner Coordinates:
+Upper Left    (     74.767,     33.917)
+Lower Left    (     74.767,     29.742)
+Upper Right   (     85.175,     33.917)
+Lower Right   (     85.175,     29.742)
+Center        (     79.971,     31.829)
