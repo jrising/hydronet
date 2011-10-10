@@ -33,8 +33,8 @@ HydroModel::HydroModel(DividedRange latitudes, DividedRange longitudes, double p
 
   minSurface = .1;
   minRiver = .001;
-  //maxSurfaceVelocity = 1;
-  //maxRiverVelocity = 10;
+  maxSurfaceVelocity = 1;
+  maxRiverVelocity = 5;
 }
 
 HydroModel::HydroModel(DividedRange latitudes, DividedRange longitudes, double precipCoefficient, double meltCoefficient, unsigned rrFlow, unsigned ccFlow)
@@ -67,8 +67,8 @@ HydroModel::HydroModel(DividedRange latitudes, DividedRange longitudes, double p
 
   minSurface = .1;
   minRiver = .001;
-  //maxSurfaceVelocity = 1;
-  //maxRiverVelocity = 10;
+  maxSurfaceVelocity = 1;
+  maxRiverVelocity = 5;
 }
 
 void HydroModel::setElevation(GeographicMap<double>* elevation) {
@@ -122,8 +122,8 @@ void HydroModel::stepDay() {
   GeographicMap<bool>& validSnowCover = scaledSnowCover >= 0.0;
 
   cout << "Adding surface flow" << endl;
-  GeographicMap<double> newVolume(latitudes, longitudes);
-  GeographicMap<double> newVolumeConf(latitudes, longitudes);
+  MatrixGeographicMap<double> newVolume(latitudes, longitudes);
+  MatrixGeographicMap<double> newVolumeConf(latitudes, longitudes);
 
   for (unsigned rr = 1; rr < latitudes.count() - 1; rr++)
     for (unsigned cc = 1; cc < longitudes.count() - 1; cc++) {
@@ -188,99 +188,98 @@ void HydroModel::stepDay() {
           riverConfAfter->getCell(rr, cc) += riverConf->getCellConst(rr, cc);
           riverConfWeightAfter->getCell(rr, cc) += 1;
           surfaceVolumeAfter->getCell(rr, cc) = surface;
-          continue;
-        }
-
-        unsigned rr0, cc0, rr1, cc1; // rr0, cc0 is always straight, rr1, cc1 is diagonal
-        double portion0; // portion1 = 1 - portion0
-
-        double dir = direction->getCellConst(rr, cc);
-        if (dir < 0 || dir > 2 * PI)
-          dir = 2 * PI * ((double) rand() / (double) RAND_MAX);
-          
-        if (dir < M_PI / 4) {
-          rr0 = rr;
-          cc0 = cc1 = cc + 1;
-          rr1 = rr - 1;
-          portion0 = 1 - dir / (M_PI / 4);
-        } else if (dir < M_PI / 2) {
-          rr0 = rr1 = rr - 1;
-          cc0 = cc;
-          cc1 = cc + 1;
-          portion0 = (dir - M_PI / 4) / (M_PI / 4);
-        } else if (dir < 3 * M_PI / 4) {
-          rr0 = rr1 = rr - 1;
-          cc0 = cc;
-          cc1 = cc - 1;
-          portion0 = 1 - (dir - M_PI / 2) / (M_PI / 4);
-        } else if (dir < M_PI) {
-          rr0 = rr;
-          cc0 = cc1 = cc - 1;
-          rr1 = rr - 1;
-          portion0 = (dir - 3 * M_PI / 4) / (M_PI / 4);
-        } else if (dir < 5 * M_PI / 4) {
-          rr0 = rr;
-          cc0 = cc1 = cc - 1;
-          rr1 = rr + 1;
-          portion0 = 1 - (dir - M_PI) / (M_PI / 4);
-        } else if (dir < 3 * M_PI / 2) {
-          rr0 = rr1 = rr + 1;
-          cc0 = cc;
-          cc1 = cc - 1;
-          portion0 = (dir - 5 * M_PI / 4) / (M_PI / 4);
-        } else if (dir < 7 * M_PI / 4) {
-          rr0 = rr1 = rr + 1;
-          cc0 = cc;
-          cc1 = cc + 1;
-          portion0 = 1 - (dir - 3 * M_PI / 2) / (M_PI / 4);
         } else {
-          rr0 = rr;
-          cc0 = cc1 = cc + 1;
-          rr1 = rr + 1;
-          portion0 = (dir - 7 * M_PI / 4) / (M_PI / 4);
-        }
+          unsigned rr0, cc0, rr1, cc1; // rr0, cc0 is always straight, rr1, cc1 is diagonal
+          double portion0; // portion1 = 1 - portion0
+
+          double dir = direction->getCellConst(rr, cc);
+          if (dir < 0 || dir > 2 * PI)
+            dir = 2 * PI * ((double) rand() / (double) RAND_MAX);
+          
+          if (dir < M_PI / 4) {
+            rr0 = rr;
+            cc0 = cc1 = cc + 1;
+            rr1 = rr - 1;
+            portion0 = 1 - dir / (M_PI / 4);
+          } else if (dir < M_PI / 2) {
+            rr0 = rr1 = rr - 1;
+            cc0 = cc;
+            cc1 = cc + 1;
+            portion0 = (dir - M_PI / 4) / (M_PI / 4);
+          } else if (dir < 3 * M_PI / 4) {
+            rr0 = rr1 = rr - 1;
+            cc0 = cc;
+            cc1 = cc - 1;
+            portion0 = 1 - (dir - M_PI / 2) / (M_PI / 4);
+          } else if (dir < M_PI) {
+            rr0 = rr;
+            cc0 = cc1 = cc - 1;
+            rr1 = rr - 1;
+            portion0 = (dir - 3 * M_PI / 4) / (M_PI / 4);
+          } else if (dir < 5 * M_PI / 4) {
+            rr0 = rr;
+            cc0 = cc1 = cc - 1;
+            rr1 = rr + 1;
+            portion0 = 1 - (dir - M_PI) / (M_PI / 4);
+          } else if (dir < 3 * M_PI / 2) {
+            rr0 = rr1 = rr + 1;
+            cc0 = cc;
+            cc1 = cc - 1;
+            portion0 = (dir - 5 * M_PI / 4) / (M_PI / 4);
+          } else if (dir < 7 * M_PI / 4) {
+            rr0 = rr1 = rr + 1;
+            cc0 = cc;
+            cc1 = cc + 1;
+            portion0 = 1 - (dir - 3 * M_PI / 2) / (M_PI / 4);
+          } else {
+            rr0 = rr;
+            cc0 = cc1 = cc + 1;
+            rr1 = rr + 1;
+            portion0 = (dir - 7 * M_PI / 4) / (M_PI / 4);
+          }
         
-        double distanceStraight = riverVolume->calcDistance(rr, cc, rr0, cc0);
-        double distanceDiagonal = riverVolume->calcDistance(rr, cc, rr1, cc1);
-
-        if (river >= minRiver) {
-          double rivervel = riverVelocity.getCellConst(rr, cc);
-          double riverPortionStraight = (rivervel * step) / distanceStraight;
-          double riverPortionDiagonal = (rivervel * step) / distanceDiagonal;
-          riverVolumeAfter->getCell(rr0, cc0) += riverPortionStraight * portion0 * river;
-          riverVolumeAfter->getCell(rr1, cc1) += riverPortionDiagonal * (1 - portion0) * river;
-          riverVolumeAfter->getCell(rr, cc) += (1 - riverPortionStraight * portion0 - riverPortionDiagonal * (1 - portion0)) * river;
-          riverConfAfter->getCell(rr0, cc0) += riverPortionStraight * portion0 * riverConf->getCellConst(rr, cc);
-          riverConfAfter->getCell(rr1, cc1) += riverPortionDiagonal * (1 - portion0) * riverConf->getCellConst(rr, cc);
-          riverConfAfter->getCell(rr, cc) += (1 - riverPortionStraight * portion0 - riverPortionDiagonal * (1 - portion0)) * riverConf->getCellConst(rr, cc);
-          riverConfWeightAfter->getCell(rr0, cc0) += riverPortionStraight * portion0;
-          riverConfWeightAfter->getCell(rr1, cc1) += riverPortionDiagonal * (1 - portion0);
-          riverConfWeightAfter->getCell(rr, cc) += (1 - riverPortionStraight * portion0 - riverPortionDiagonal * (1 - portion0));
-
-          if (rr == rrFlow && cc == ccFlow)
-            outFlowDay += (riverPortionStraight * portion0 + riverPortionDiagonal * (1 - portion0)) * river;
-        } else {
-          riverVolumeAfter->getCell(rr, cc) += river;
-          riverConfAfter->getCell(rr, cc) += riverConf->getCellConst(rr, cc);
-          riverConfWeightAfter->getCell(rr, cc) += 1;
-        }
-
-        if (surface >= minSurface) {
-          double surfacevel = surfaceVelocity.getCellConst(rr, cc);
-          double surfacePortionStraight = (surfacevel * step) / distanceStraight;
-          double surfacePortionDiagonal = (surfacevel * step) / distanceDiagonal;
-          riverVolumeAfter->getCell(rr0, cc0) += surfacePortionStraight * portion0 * surface;
-          riverVolumeAfter->getCell(rr1, cc1) += surfacePortionDiagonal * (1 - portion0) * surface;
-          surfaceVolumeAfter->getCell(rr, cc) = (1 - surfacePortionStraight * portion0 - surfacePortionDiagonal * (1 - portion0)) * surface;
-          riverConfAfter->getCell(rr0, cc0) += surfacePortionStraight * portion0 * surfaceConf->getCellConst(rr, cc);
-          riverConfAfter->getCell(rr1, cc1) += surfacePortionDiagonal * (1 - portion0) * surfaceConf->getCellConst(rr, cc);
-          riverConfWeightAfter->getCell(rr0, cc0) += surfacePortionStraight * portion0;
-          riverConfWeightAfter->getCell(rr1, cc1) += surfacePortionDiagonal * (1 - portion0);
+          double distanceStraight = riverVolume->calcDistance(rr, cc, rr0, cc0);
+          double distanceDiagonal = riverVolume->calcDistance(rr, cc, rr1, cc1);
           
-          if (rr == rrFlow && cc == ccFlow)
-            outFlowDay += (surfacePortionStraight * portion0 + surfacePortionDiagonal * (1 - portion0)) * surface;
-        } else
-          surfaceVolumeAfter->getCell(rr, cc) = surface;
+          if (river >= minRiver) {
+            double rivervel = riverVelocity.getCellConst(rr, cc);
+            double riverPortionStraight = (rivervel * step) / distanceStraight;
+            double riverPortionDiagonal = (rivervel * step) / distanceDiagonal;
+            riverVolumeAfter->getCell(rr0, cc0) += riverPortionStraight * portion0 * river;
+            riverVolumeAfter->getCell(rr1, cc1) += riverPortionDiagonal * (1 - portion0) * river;
+            riverVolumeAfter->getCell(rr, cc) += (1 - riverPortionStraight * portion0 - riverPortionDiagonal * (1 - portion0)) * river;
+            riverConfAfter->getCell(rr0, cc0) += riverPortionStraight * portion0 * riverConf->getCellConst(rr, cc);
+            riverConfAfter->getCell(rr1, cc1) += riverPortionDiagonal * (1 - portion0) * riverConf->getCellConst(rr, cc);
+            riverConfAfter->getCell(rr, cc) += (1 - riverPortionStraight * portion0 - riverPortionDiagonal * (1 - portion0)) * riverConf->getCellConst(rr, cc);
+            riverConfWeightAfter->getCell(rr0, cc0) += riverPortionStraight * portion0;
+            riverConfWeightAfter->getCell(rr1, cc1) += riverPortionDiagonal * (1 - portion0);
+            riverConfWeightAfter->getCell(rr, cc) += (1 - riverPortionStraight * portion0 - riverPortionDiagonal * (1 - portion0));
+
+            if (rr == rrFlow && cc == ccFlow)
+              outFlowDay += (riverPortionStraight * portion0 + riverPortionDiagonal * (1 - portion0)) * river;
+          } else {
+            riverVolumeAfter->getCell(rr, cc) += river;
+            riverConfAfter->getCell(rr, cc) += riverConf->getCellConst(rr, cc);
+            riverConfWeightAfter->getCell(rr, cc) += 1;
+          }
+
+          if (surface >= minSurface) {
+            double surfacevel = surfaceVelocity.getCellConst(rr, cc);
+            double surfacePortionStraight = (surfacevel * step) / distanceStraight;
+            double surfacePortionDiagonal = (surfacevel * step) / distanceDiagonal;
+            riverVolumeAfter->getCell(rr0, cc0) += surfacePortionStraight * portion0 * surface;
+            riverVolumeAfter->getCell(rr1, cc1) += surfacePortionDiagonal * (1 - portion0) * surface;
+            surfaceVolumeAfter->getCell(rr, cc) = (1 - surfacePortionStraight * portion0 - surfacePortionDiagonal * (1 - portion0)) * surface;
+            riverConfAfter->getCell(rr0, cc0) += surfacePortionStraight * portion0 * surfaceConf->getCellConst(rr, cc);
+            riverConfAfter->getCell(rr1, cc1) += surfacePortionDiagonal * (1 - portion0) * surfaceConf->getCellConst(rr, cc);
+            riverConfWeightAfter->getCell(rr0, cc0) += surfacePortionStraight * portion0;
+            riverConfWeightAfter->getCell(rr1, cc1) += surfacePortionDiagonal * (1 - portion0);
+          
+            if (rr == rrFlow && cc == ccFlow)
+              outFlowDay += (surfacePortionStraight * portion0 + surfacePortionDiagonal * (1 - portion0)) * surface;
+          } else
+            surfaceVolumeAfter->getCell(rr, cc) = surface;
+        }
 
         double stepFraction = step / (double) DividedRange::toTimespan(1);
         double addition = newVolume.getCellConst(rr, cc) * stepFraction;
@@ -380,7 +379,7 @@ GeographicMap<double>& HydroModel::calcManningRiver(GeographicMap<double>* volum
       }
 
       double vel = calcManning(.033, r, max(height / (2 * 1000), slope->getCellConst(rr, cc)));
-      result->getCell(rr, cc) = min(vel, 90 * sqrt(height)); // terminal velocity //maxRiverVelocity);
+      result->getCell(rr, cc) = min(vel, maxRiverVelocity); //90 * sqrt(height)); // terminal velocity
     }
 
   return *result;
@@ -404,7 +403,7 @@ GeographicMap<double>& HydroModel::calcManningSurface(GeographicMap<double>* vol
       
       double height = vol / volume->calcArea(rr, cc);
       double vel = calcManning(.025, height, max(height / (2 * 1000), slope->getCellConst(rr, cc)));
-      result->getCell(rr, cc) = min(vel, 90 * sqrt(height / 2)); //(water terminal velocity)//maxSurfaceVelocity);
+      result->getCell(rr, cc) = min(vel, maxSurfaceVelocity); //90 * sqrt(height / 2)); //(water terminal velocity)
     }
 
   return *result;
