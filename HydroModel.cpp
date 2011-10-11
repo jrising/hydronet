@@ -158,12 +158,17 @@ void HydroModel::stepDay() {
     //cout << "Volume: " << riverVolume->getCellConst(rrFlow, ccFlow) << " + " << surfaceVolume->getCellConst(rrFlow, ccFlow) << " at " << 
     //riverVelocity.getCellConst(rrFlow, ccFlow) << ", " << surfaceVelocity.getCellConst(rrFlow, ccFlow) << endl;
 
-    //cout << "Max velocites: " << riverVelocity.max() << ", " << surfaceVelocity.max() << endl;
-    double step = mindist / max(riverVelocity.max(), surfaceVelocity.max()); // in s
-    if (step > DividedRange::toTimespan(1) - elapsed)
+    cout << "Max velocites: " << riverVelocity.max() << ", " << surfaceVelocity.max() << endl;
+    double maxvel = max(riverVelocity.max(), surfaceVelocity.max()); // in s
+    unsigned step;
+    if (maxvel > 0) {
+      step = (unsigned) (mindist / maxvel);
+      if (step > DividedRange::toTimespan(1) - elapsed)
+	step = DividedRange::toTimespan(1) - elapsed;
+      if (step < 1)
+	step = 1;
+    } else
       step = DividedRange::toTimespan(1) - elapsed;
-    if (step < 1)
-      step = 1;
 
     // move the liquid
     MatrixGeographicMap<double>* riverVolumeAfter = new MatrixGeographicMap<double>(latitudes, longitudes);
