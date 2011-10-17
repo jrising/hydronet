@@ -35,9 +35,9 @@ int main(int argc, const char* argv[])
     slope /= 1e5; // don't produce transient!
 
     model.setDInfinity(new GeographicMap<double>(slope),
-                       new GeographicMap<double>(*MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                                                                                      DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
-                                                                                      "finalang.tiff")));
+                       new DInfinityMap(*MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
+                                                                           DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
+                                                                           "finalang.tiff")));
 
     cout << "Loading precipitation" << endl;
     model.setPrecipitation(DelayedPartialConfidenceTemporalGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),

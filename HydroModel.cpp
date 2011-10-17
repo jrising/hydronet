@@ -2,6 +2,7 @@
 #include "HydroModel.h"
 #include <indicator/Inds.h>
 #include <memory/Transients.h>
+#include <utils/Timer.h>
 
 HydroModel::HydroModel(DividedRange latitudes, DividedRange longitudes, double precipCoefficient, double meltCoefficient, double latFlow, double lonFlow)
   : latitudes(latitudes), longitudes(longitudes), now(0, Inds::unixtime) {
@@ -75,7 +76,7 @@ void HydroModel::setElevation(GeographicMap<double>* elevation) {
   this->elevation = elevation;
 }
 
-void HydroModel::setDInfinity(GeographicMap<double>* slope, GeographicMap<double>* direction) {
+void HydroModel::setDInfinity(GeographicMap<double>* slope, DInfinityMap* direction) {
   this->direction = direction;
   cout << "Direction from " << direction->min() << " to " << direction->max() << endl;
   this->slope = slope;
@@ -181,6 +182,7 @@ void HydroModel::stepDay() {
 
     for (unsigned rr = 0; rr < latitudes.count(); rr++)
       for (unsigned cc = 0; cc < longitudes.count(); cc++) {
+        Timer::start("outer");
         if (rr == 0 || cc == 0 || rr == latitudes.count() - 1 || cc == longitudes.count() - 1) {
           riverVolumeAfter->getCell(rr, cc) = 0;
           surfaceVolumeAfter->getCell(rr, cc) = 0;
@@ -194,58 +196,16 @@ void HydroModel::stepDay() {
           riverConfWeightAfter->getCell(rr, cc) += 1;
           surfaceVolumeAfter->getCell(rr, cc) = surface;
         } else {
+          Timer::start("one");
           unsigned rr0, cc0, rr1, cc1; // rr0, cc0 is always straight, rr1, cc1 is diagonal
           double portion0; // portion1 = 1 - portion0
-
-          double dir = direction->getCellConst(rr, cc);
-          if (dir < 0 || dir > 2 * PI)
-            dir = 2 * PI * ((double) rand() / (double) RAND_MAX);
-          
-          if (dir < M_PI / 4) {
-            rr0 = rr;
-            cc0 = cc1 = cc + 1;
-            rr1 = rr - 1;
-            portion0 = 1 - dir / (M_PI / 4);
-          } else if (dir < M_PI / 2) {
-            rr0 = rr1 = rr - 1;
-            cc0 = cc;
-            cc1 = cc + 1;
-            portion0 = (dir - M_PI / 4) / (M_PI / 4);
-          } else if (dir < 3 * M_PI / 4) {
-            rr0 = rr1 = rr - 1;
-            cc0 = cc;
-            cc1 = cc - 1;
-            portion0 = 1 - (dir - M_PI / 2) / (M_PI / 4);
-          } else if (dir < M_PI) {
-            rr0 = rr;
-            cc0 = cc1 = cc - 1;
-            rr1 = rr - 1;
-            portion0 = (dir - 3 * M_PI / 4) / (M_PI / 4);
-          } else if (dir < 5 * M_PI / 4) {
-            rr0 = rr;
-            cc0 = cc1 = cc - 1;
-            rr1 = rr + 1;
-            portion0 = 1 - (dir - M_PI) / (M_PI / 4);
-          } else if (dir < 3 * M_PI / 2) {
-            rr0 = rr1 = rr + 1;
-            cc0 = cc;
-            cc1 = cc - 1;
-            portion0 = (dir - 5 * M_PI / 4) / (M_PI / 4);
-          } else if (dir < 7 * M_PI / 4) {
-            rr0 = rr1 = rr + 1;
-            cc0 = cc;
-            cc1 = cc + 1;
-            portion0 = 1 - (dir - 3 * M_PI / 2) / (M_PI / 4);
-          } else {
-            rr0 = rr;
-            cc0 = cc1 = cc + 1;
-            rr1 = rr + 1;
-            portion0 = (dir - 7 * M_PI / 4) / (M_PI / 4);
-          }
+          direction->getDirections(rr, cc, rr0, cc0, rr1, cc1, portion0);
         
           double distanceStraight = riverVolume->calcDistance(rr, cc, rr0, cc0);
           double distanceDiagonal = riverVolume->calcDistance(rr, cc, rr1, cc1);
+          Timer::end("one");
           
+          Timer::start("two");
           if (river >= minRiver) {
             double rivervel = riverVelocity.getCellConst(rr, cc);
             double riverPortionStraight = (rivervel * step) / distanceStraight;
@@ -284,8 +244,11 @@ void HydroModel::stepDay() {
               outFlowDay += (surfacePortionStraight * portion0 + surfacePortionDiagonal * (1 - portion0)) * surface;
           } else
             surfaceVolumeAfter->getCell(rr, cc) = surface;
+          Timer::end("two");
         }
+        Timer::end("outer");
 
+        Timer::start("lower");
         double stepFraction = step / (double) DividedRange::toTimespan(1);
         double addition = newVolume.getCellConst(rr, cc) * stepFraction;
         if (addition > 0) {
@@ -302,6 +265,7 @@ void HydroModel::stepDay() {
             surfaceConf->getCell(rr, cc) = (surfaceConf->getCellConst(rr, cc) * (2 - stepFraction) + newVolumeConf.getCellConst(rr, cc) * stepFraction) / 2;
           }
         }
+        Timer::end("lower");
       }
 
     *riverConfAfter /= *riverConfWeightAfter;
@@ -317,6 +281,7 @@ void HydroModel::stepDay() {
     elapsed += step;
 
     cout << "Cleaning memory, elapsed: " << elapsed << endl;
+    cout << "Timers: " << Timer::get("outer") << ", " << Timer::get("one") << ", " << Timer::get("two") << ", " << Timer::get("lower") << endl;
     Transients::clean();
   }
 

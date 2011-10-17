@@ -7,6 +7,7 @@
 #include <datastr/PartialConfidenceTemporalGeographicMap.h>
 #include <datastr/TimeSeries.h>
 #include <datastr/DividedRange.h>
+#include "DInfinityMap.h"
 
 using namespace openworld;
 
@@ -18,7 +19,7 @@ class HydroModel {
   // Inputs
   GeographicMap<double>* elevation;
   GeographicMap<double>* slope;
-  GeographicMap<double>* direction;
+  DInfinityMap* direction;
 
   PartialConfidenceTemporalGeographicMap<double>* precipitation;
   PartialConfidenceTemporalGeographicMap<double>* surfaceTemp;
@@ -46,7 +47,7 @@ class HydroModel {
   HydroModel(DividedRange latitudes, DividedRange longitudes, double precipCoefficient, double meltCoefficient, unsigned rrFlow, unsigned ccFlow);
 
   void setElevation(GeographicMap<double>* elevation);
-  void setDInfinity(GeographicMap<double>* slope, GeographicMap<double>* direction);
+  void setDInfinity(GeographicMap<double>* slope, DInfinityMap* direction);
   void setPrecipitation(PartialConfidenceTemporalGeographicMap<double>* precipitation);
   void setTemperature(PartialConfidenceTemporalGeographicMap<double>* surfaceTemp);
   void setSnowCover(TemporalGeographicMap<double>* snowCover);
