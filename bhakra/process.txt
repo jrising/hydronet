@@ -16,3 +16,10 @@ make ../dinfflowdir
 5. ../../taudem/areadinf final.tiff
 
 TODO: create shape file of outlet
+
+./demscale bhakra/elevation.tsv bhakra/elevation_new.tsv 
+~/projects/openworld/tools/convert elevation_new.tsv elevation_new.tiff uncomp.tiff
+
+
+./basinmask bhakra/finalang.tiff bhakra/mask.tsv 31.399803 76.367394
+./basinscale bhakra/finalang.tiff bhakra/mask.tsv bhakra/finalang_new.tsv bhakra/mask_new.tsv

@@ -3,13 +3,15 @@ SYS = Linux
 CC = mpic++
 DEBUG = -g
 OWD = ~/projects/openworld
-CFLAGS = -Wall -c $(DEBUG) -I $(OWD) -O3 
-LFLAGS = -Wall $(DEBUG) -O3 
+CFLAGS = -Wall -c $(DEBUG) -I $(OWD)
+LFLAGS = -Wall $(DEBUG)
 
-OBJS_MAIN = basinmask.o $(OWD)/geotiff/tiffIO.o $(OWD)/geotiff/commonLib.o $(OWD)/datastr/GeographicMap.o
+OBJS_MAIN = $(OWD)/geotiff/tiffIO.o $(OWD)/geotiff/commonLib.o $(OWD)/datastr/GeographicMap.o $(OWD)/memory/Transients.o $(OWD)/dims/Dims.o $(OWD)/indicator/Inds.o $(OWD)/dims/GlobalDimensions.o
 
-all: $(OBJS_MAIN)
-	$(CC) $(LFLAGS) $(OBJS_MAIN) -o basinmask
+all: basinmask.o basinscale.o demscale.o $(OBJS_MAIN)
+	$(CC) $(LFLAGS) basinmask.o $(OBJS_MAIN) -o basinmask
+	$(CC) $(LFLAGS) basinscale.o $(OBJS_MAIN) -o basinscale
+	$(CC) $(LFLAGS) demscale.o $(OBJS_MAIN) -o demscale
 
 #Inference rule - states a general rule for compiling .o files
 %.o : %.cpp
