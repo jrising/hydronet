@@ -20,9 +20,9 @@ int main(int argc, const char* argv[])
     // XXX: Did I check that all my sources of precip and temp are scaled the same?
     // XXX: Check that I get a reasonable value when I scale precip as it should be
 
-    HydroModel model(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                     DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
-                     0.05111236083067, 0.04331253217195, 31.399803, 76.367394);
+    HydroNetModel model(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
+                        DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
+                        0.05111236083067, 0.04331253217195, 31.399803, 76.367394);
     cout << "Loading elevation" << endl;
     model.setElevation(MatrixGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
                                                                   DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),

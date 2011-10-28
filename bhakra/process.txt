@@ -17,9 +17,12 @@ make ../dinfflowdir
 
 TODO: create shape file of outlet
 
+
+XXX: below didn't work
+
 ./demscale bhakra/elevation.tsv bhakra/elevation_new.tsv 
 ~/projects/openworld/tools/convert elevation_new.tsv elevation_new.tiff uncomp.tiff
-
+geotifcp -g info_new.txt elevation_new.tiff final_new.tiff
 
 ./basinmask bhakra/finalang.tiff bhakra/mask.tsv 31.399803 76.367394
 ./basinscale bhakra/finalang.tiff bhakra/mask.tsv bhakra/finalang_new.tsv bhakra/mask_new.tsv
