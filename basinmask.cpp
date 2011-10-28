@@ -24,17 +24,8 @@ int main(int argc, const char* argv[]) {
     queue< pair<unsigned, unsigned> > pending;
     pending.push(pair<unsigned, unsigned>(rrinit, ccinit));
 
-    //unsigned furthest_cc = 0, furthest_rr = 0;
-
     while (!pending.empty()) {
       pair<unsigned, unsigned> rc = pending.front();
-
-      //cout << rc.first << ", " << rc.second << ": " << map.getCellConst(rc.first, rc.second) << endl;
-
-      /*if (rc.second > furthest_cc) {
-        furthest_rr = rc.first;
-        furthest_cc = rc.second;
-        }*/
 
       checkCell(rc.first - 1, rc.second - 1, rc.first, rc.second, map, pending, mask);
       checkCell(rc.first - 1, rc.second, rc.first, rc.second, map, pending, mask);
@@ -47,37 +38,6 @@ int main(int argc, const char* argv[]) {
 
       pending.pop();
     }
-
-    /*for (unsigned rr = furthest_rr - 2; rr <= furthest_rr + 2; rr++) {
-      for (unsigned cc = furthest_cc - 2; cc <= furthest_cc + 2; cc++)
-        cout << map.getCellConst(rr, cc) << ":" << mask.getCellConst(rr, cc) << " ";
-      cout << endl;
-      }
-
-    // figure out where it would go!
-    unsigned rr = furthest_rr, cc = furthest_cc + 1;
-    while (rr >= 0 || rr < map.getLatitudes().count() || cc > 0 || cc < map.getLongitudes().count()) {
-      cout << rr << ", " << cc << ": " << map.getCellConst(rr, cc) << endl;
-      mask.getCell(rr, cc) = -1;
-
-      unsigned rr0, cc0, rr1, cc1;
-      double portion0;
-      map.getDirections(rr, cc, rr0, cc0, rr1, cc1, portion0);
-      cout << "  " << rr0 << ", " << cc0 << " and " << rr1 << ", " << cc1 << " - " << portion0 << endl;
-      if ((mask.getCellConst(rr0, cc0) == 1 && portion0 > 0) || (mask.getCellConst(rr1, cc1) == 1 && portion0 < 1)) {
-        cout << "Flows in!" << endl;
-        break;
-      } else if ((portion0 == 0 || mask.getCellConst(rr0, cc0) == -1) && (portion0 == 1 || mask.getCellConst(rr1, cc1) == -1)) {
-        cout << "Flows in circles!" << endl;
-        break;
-      } else if ((mask.getCellConst(rr0, cc0) == -1 && portion0 < 1) || portion0 == 0) {
-        rr = rr1;
-        cc = cc1;
-      } else {
-        rr = rr0;
-        cc = cc0;
-      }
-      }*/
 
     mask.getValues().saveDelimited(argv[2], FileFormatter<bool>::formatSimple, '\t');
   } MPI_Finalize();
