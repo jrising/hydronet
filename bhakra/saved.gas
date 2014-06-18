@@ -1,0 +1,240 @@
+10 0.655537 0 68 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00515041 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0603463 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.44456 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000455079 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00491881 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0319271 rainRunoffCoefficient
+0.655743 0 65 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00470393 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.00777427 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 4.90814 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000152842 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00829587 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0289834 rainRunoffCoefficient
+0.655782 0 63 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00462631 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0240134 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 4.55725 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000133345 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00819064 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0293593 rainRunoffCoefficient
+0.656494 0 66 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00517957 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0481656 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.50446 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000458278 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00491881 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0322008 rainRunoffCoefficient
+0.65849 0 67 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00521088 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0474828 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.44456 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000458278 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00491881 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0319271 rainRunoffCoefficient
+0.659889 0 68 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00502969 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0480388 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.3653 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000451275 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00498915 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.032039 rainRunoffCoefficient
+0.660051 0 69 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00521088 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0425877 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.54286 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000657973 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00495572 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0330942 rainRunoffCoefficient
+0.661234 0 68 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00521088 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0474828 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.54286 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000662918 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00491881 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0319271 rainRunoffCoefficient
+0.663368 0 65 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00514952 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0481323 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.41209 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000465242 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00491881 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0263708 rainRunoffCoefficient
+0.663383 0 64 6                                        
+0                                        none
+groundCoefficient
+0 1 0.00513267 groundCoefficient
+
+0                                        none
+timePortion
+0 1 0.0478994 groundToBaseflowDay
+
+0                                        none
+degreeDayFactor
+0 10 7.39573 meltDegreeDayFactor
+
+0                                        none
+degreeDaySlope
+-0.001 0.001 -0.000459404 meltDegreeDaySlope
+
+0                                        none
+runoffCoefficient
+0 1 0.00491881 meltRunoffCoefficient
+
+0                                        none
+runoffCoefficient
+0 1 0.0263708 rainRunoffCoefficient
