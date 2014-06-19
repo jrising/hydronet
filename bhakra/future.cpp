@@ -1,23 +1,21 @@
-//#define USE_DUMMY
-
 #include <iostream>
 #include <stdio.h>
-#include "../SJHydroNetModel.h"
-#include "../BackupSnowModel.h"
-#include "../BalanceSnowModel.h"
-#include "../CompareSnowModel.h"
+#include "../code/SJHydroNetModel.h"
+#include "../code/BalanceSnowModel.h"
 #include <datastr/GeographicMap.h>
 #include <datastr/ConstantGeographicMap.h>
+#include <datastr/ScaledGeographicMap.h>
 #include <datastr/DelayedTemporalGeographicMap.h>
 #include <datastr/DelayedPartialConfidenceTemporalGeographicMap.h>
 #include <datastr/TimeSeries.h>
 #include <datastr/DividedRange.h>
 #include <datastr/FileFormats.h>
+#include <tools/hydro/DInfinityMap.h>
 #include <metrics/OLS.h>
 #include <measure/Inds.h>
-#ifdef USE_DUMMY
-#include "../DummyCompareSnowModel.h"
-#endif
+#include <measure/Units.h>
+
+using namespace openworld;
 
 int main(int argc, const char* argv[])
 {
@@ -26,16 +24,17 @@ int main(int argc, const char* argv[])
 	MPI_Comm_rank(MCW,&rank);
 	MPI_Comm_size(MCW,&size);
 
+    Indicator uniformYear = LinearIndicator("Uniform year", Units::s, 0, numeric_limits<double>::max());
+
+    DividedRange precislats = DividedRange::withEnds(29.823100, 34.6906, 0.442500, Inds::lat);
+    DividedRange precislons = DividedRange::withEnds(75.797500, 84.6475, 0.442500, Inds::lon);
+    DividedRange precistime = DividedRange(1961, 2099, 1.0/360, uniformYear);
+
     DividedRange latitudes = DividedRange::withEnds(29.625, 33.875, .25, Inds::lat);
     DividedRange longitudes = DividedRange::withEnds(74.875, 85.125, .25, Inds::lon);
 
-    SJHydroNetModel model(latitudes, longitudes, Inds::unixtime,
-                          // meltDegreeDayFactor, meltDegreeDaySlope, rainRunoffCoefficient, meltRunoffCoefficient, groundCoefficient, groundToBaseflowDay, surfaceEvaporationFactor, riverEvaporationFactor
-                          7.39573, -0.000459404, 0.0263708, 0.00491881, 0.00513267, 0.0478994, 0, 0); 
-                          //3.08558, -0.000108007, 0.028037, 0.0114833, 0.0089908, 0.0281662, 0, 0); // single-year , "allcells.tsv");
-                          //2.98302, -0.000162646, 0.0295818, 0.0117123, 0.00921557, 0.0270544, 0, 0); // older single-year
-
-    //model.setSnowCoverDifference(1.0);
+    SJHydroNetModel model(latitudes, longitudes, uniformYear,
+                          2.98302, -0.000162646, 0.0295818, 0.0117123, 0.00921557, 0.0270544, 0, 0);
 
     cout << "Setting up model" << endl;
     GeographicMap<float>& slope = *MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
@@ -43,7 +42,8 @@ int main(int argc, const char* argv[])
                                                                         "finalslp.tiff");
     slope /= 1e5; // don't produce transient!
 
-    model.setup(MatrixGeographicMap<double>::loadDelimited(latitudes, longitudes,
+    model.setup(MatrixGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),
+                                                           DividedRange::withEnds(74.875, 85.125, .25, Inds::lon),
                                                            "mask_new.tsv", NULL, '\t'),
                 MatrixGeographicMap<bool>::loadDelimited(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
                                                            DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
@@ -53,40 +53,20 @@ int main(int argc, const char* argv[])
                                                                        DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
                                                                        "finalang.tiff")), 10000.0);
 
-    /*cout << "Edges:" << endl;
-    list<pair<pair<pair<Measure, Measure>, pair<Measure, Measure> >, pair<bool, double> > > edges = model.getAllEdges();
-    list<pair<pair<pair<Measure, Measure>, pair<Measure, Measure> >, pair<bool, double> > >::iterator it;
-    for (it = edges.begin(); it != edges.end(); it++) {
-      cout << "[[" << it->first.first.first.getValue() << ", " << it->first.first.second.getValue() << "], ";
-      if (it->first.second.first.getValue() == 0 && it->first.second.second.getValue() == 0)
-        cout << "null, ";
-      else
-        cout << "[" << it->first.second.first.getValue() << ", " << it->first.second.second.getValue() << "], ";
-      cout << (it->second.first ? "true, " : "false, ") << it->second.second << "]" << endl;
-      }*/
-
     cout << "Loading precipitation" << endl;
-    model.setPrecipitation(DelayedPartialConfidenceTemporalGeographicMap<double>::loadDelimited(latitudes, longitudes,
-                                                                                                DividedRange::withMax(DividedRange::toTime(1948, 1, 1),
-                                                                                                                      DividedRange::toTime(2011, 2, 28),
-                                                                                                                      DividedRange::toTimespan(1).getValue(), Inds::unixtime),
-                                                                                                "mergeprecip.tsv",
-                                                                                                "mergeprecip_conf.tsv", NULL, '\t'));
+    DelayedTemporalGeographicMap<float>* precip = DelayedTemporalGeographicMap<float>::loadBinary(precislats, precislons, precistime, "/Users/jrising/Dropbox/Himalayan Flooding/PRECIS/precis-q0-himalaya-daily-05216-1961-2098.dat", 4, FileParser<float>::parseNativeEndianFloat);
+    model.setPrecipitation(DelayedPartialConfidenceTemporalGeographicMap<double>::convertScale(precip, 86400));
     
     cout << "Loading temeprature" << endl;
-    model.setTemperature(DelayedPartialConfidenceTemporalGeographicMap<double>::loadDelimited(latitudes, longitudes,
-                                                                                              DividedRange::withMax(DividedRange::toTime(1948, 1, 1),
-                                                                                                                    DividedRange::toTime(2011, 2, 8),
-                                                                                                                    DividedRange::toTimespan(1).getValue(), Inds::unixtime),
-                                                                                              "mergetemps.tsv",
-                                                                                              "mergetemps_conf.tsv", NULL, '\t'));
+    DelayedTemporalGeographicMap<float>* tempmin = DelayedTemporalGeographicMap<float>::loadBinary(precislats, precislons, precistime, "/Users/jrising/Dropbox/Himalayan Flooding/PRECIS/precis-q0-himalaya-daily-03236min-1961-2098.dat", 4, FileParser<float>::parseNativeEndianFloat);
+    DelayedTemporalGeographicMap<float>* tempmax = DelayedTemporalGeographicMap<float>::loadBinary(precislats, precislons, precistime, "/Users/jrising/Dropbox/Himalayan Flooding/PRECIS/precis-q0-himalaya-daily-03236max-1961-2098.dat", 4, FileParser<float>::parseNativeEndianFloat);
+
+    DelayedPartialConfidenceTemporalGeographicMap<double>* converted = DelayedPartialConfidenceTemporalGeographicMap<double>::convertSumScale(tempmin, tempmax, 0.5);
+
+    model.setTemperature(converted);
 
     cout << "Loading snow cover" << endl;
     
-    DividedRange snowLatitude = DividedRange::withEnds(29.83333, 33.83333, .3333333, Inds::lat);
-    DividedRange snowLongitude = DividedRange::withEnds(74.83333, 85.16667, .3333333, Inds::lon);
-
-    #ifndef USE_DUMMY
     const double initialSnowData[18][42] = {
       // [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13] [,14] [,15] [,16] [,17] [,18] [,19] [,20] [,21] [,22] [,23] [,24] [,25] [,26] [,27] [,28] [,29] [,30] [,31] [,32] [,33] [,34] [,35] [,36] [,37] [,38] [,39] [,40] [,41] [,42]
       { 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -114,48 +94,29 @@ int main(int argc, const char* argv[])
         initialSnow[ii][jj] = initialSnowData[ii][jj];
     }
     MatrixGeographicMap<double> initialVolumes(latitudes, longitudes, initialSnow);
-    #else
-    ConstantGeographicMap<double> initialVolumes(latitudes, longitudes, 0);
-    #endif
 
-    DividedRange snowCoverTime = DividedRange::withMax(DividedRange::toTime(1988, 1, 1),
-                                                       DividedRange::toTime(2003, 5, 1),
-                                                       DividedRange::toTimespan(365.25 / 52).getValue(), Inds::unixtime);
-    DividedRange fullTime = DividedRange::withMax(DividedRange::toTime(1963, 1, 1),
-                                                  DividedRange::toTime(2005, 4, 25),
-                                                  DividedRange::toTimespan(1).getValue(), Inds::unixtime);
-    BackupSnowModel* snowCover = new BackupSnowModel(DelayedTemporalGeographicMap<double>::loadDelimited(snowLatitude, snowLongitude,
-                                                                                  snowCoverTime, "snows.tsv", NULL, '\t'),
-                                                     DelayedTemporalGeographicMap<double>::loadDelimited(snowLatitude, snowLongitude,
-                                                                                  snowCoverTime, "snows.tsv", NULL, '\t'),
-                                                     fullTime,
-                                                     .25, Measure(DividedRange::toTime(1988, 1, 15), Inds::unixtime));
-    #ifdef USE_DUMMY
-    DummyCompareSnowModel* snowCompare = new DummyCompareSnowModel(*snowCover, initialVolumes, snowCoverTime);
-    #else
-    ScaledGeographicMap<double> scaledInitialCover((*snowCover)[Measure(DividedRange::toTime(1988, 1, 1), Inds::unixtime)], latitudes, longitudes, 0.0);
-    BalanceSnowModel* snowModel = new BalanceSnowModel(initialVolumes, scaledInitialCover, snowCoverTime, 9.178893e-01, 1.396938e-07, -7.527681e-08, 1.119644e-09);
-    unlink("snowcompare.tsv");
-    CompareSnowModel* snowCompare = new CompareSnowModel(*snowCover, *snowModel, snowCoverTime, "snowcompare.tsv");
-    model.setSnowModel(snowCompare);
-    #endif
+    DividedRange snowLatitude = DividedRange::withEnds(29.83333, 33.83333, .3333333, Inds::lat);
+    DividedRange snowLongitude = DividedRange::withEnds(74.83333, 85.16667, .3333333, Inds::lon);
+    DelayedTemporalGeographicMap<double>* snowCover = DelayedTemporalGeographicMap<double>::loadDelimited(snowLatitude, snowLongitude,
+                                                                                                          DividedRange::withMax(DividedRange::toTime(1988, 1, 1),
+                                                       DividedRange::toTime(2005, 5, 1),
+                                                       DividedRange::toTimespan(365.25 / 52).getValue(), Inds::unixtime), "snows.tsv", NULL, '\t');
+
+    GeographicMap<double>& firstCover = (*snowCover)[Measure(DividedRange::toTime(1988, 1, 15), Inds::unixtime)];
+    ScaledGeographicMap<double> scaledInitialCover(firstCover, latitudes, longitudes, 0.0);
+
+    BalanceSnowModel* snowModel = new BalanceSnowModel(initialVolumes, scaledInitialCover, DividedRange(1988, 2099, 1.0/52.0, uniformYear), 9.178893e-01, 1.396938e-07, -7.527681e-08, 1.119644e-09);
+    model.setSnowModel(snowModel);
 
     cout << "Loading elevation" << endl;
     model.setElevation(MatrixGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
                                                                   DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
                                                                   "elevation.tsv", NULL, '\t'));
 
-    cout << "Loading bhakra flow" << endl;
-    TimeSeries<double>* known = TimeSeries<double>::loadDelimited(DividedRange::withMax(DividedRange::toTime(1963, 1, 1),
-                                                                                        DividedRange::toTime(2005, 4, 25),
-                                                                                        DividedRange::toTimespan(1).getValue(), Inds::unixtime),
-                                                                  "satluj.tsv", NULL, '\t');
-    *known *= 2446.56555; // Needs to be multiplied by 2446.57555 for ft^3/s to m^3/day
-
     cout << "Initialization complete." << endl;
 
     try {
-      model.runTo(DividedRange::toTime(2004, 12, 31));
+      model.runTo(2098);
     } catch (exception& e) {
       cout << "Exception: " << e.what() << endl;
     }
@@ -164,6 +125,6 @@ int main(int argc, const char* argv[])
     list<double>::iterator it1, it2;
     for (it1 = predsPrecip.begin(), it2 = predsMelt.begin(); it1 != predsPrecip.end() && it2 != predsMelt.end(); it1++, it2++)
       cout << *it1 << ", " << *it2 << endl;
-    
+
   } MPI_Finalize();
 }
