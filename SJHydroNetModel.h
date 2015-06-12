@@ -85,6 +85,46 @@ class SJHydroNetModel {
   // diagnostics
   list<pair<pair<pair<Measure, Measure>, pair<Measure, Measure> >, pair<bool, double> > > getAllEdges();
 
+  // Serializable protocol
+
+  friend istream& operator>>(istream& in, SJHydroNetModel& sink) {
+    PointerReference reference;
+
+    sink.latitudes = DividedRange::streamExtract(in);
+    sink.longitudes = DividedRange::streamExtract(in);
+    sink.timeind = Indicator::streamExtract(in);
+
+    sink.net->streamExtract(in, reference);
+    sink.out = HydroOutputNode::streamExtractPointer(in, reference);
+
+    // DO NOT INPUT INPUT DATA
+
+    in >> sink.precipMult >> sink.tempAdd >> sink.snowDiff;
+
+    // DO NOT INPUT CURRENT STATE
+    return in;
+  }
+
+  friend ostream& operator<<(ostream& os, SJHydroNetModel& source) {
+      PointerTracker tracker;
+
+      source.latitudes.streamInsert(os);
+      source.longitudes.streamInsert(os);
+      source.timeind.streamInsert(os);
+
+      source.net->streamInsert(os, tracker);
+      source.out->streamInsertPointer(os, tracker);
+
+      // DO NOT OUTPUT INPUT DATA
+
+      os << source.precipMult << " " << source.tempAdd << " " << source.snowDiff;
+
+      // DO NOT OUTPUT CURRENT STATE
+      return os;
+  }
+  //  friend istream& operator>>(istream& in, const SJHydroNetModel& sink);
+  //  friend ostream& operator<<(ostream& os, const SJHydroNetModel& source);
+  
  protected:
   GeographicMap<double>& weightedFraction(GeographicMap<double>& weights1, GeographicMap<double>& values1, GeographicMap<double>& weights2, GeographicMap<double>& values2);
 };

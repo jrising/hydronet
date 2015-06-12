@@ -314,6 +314,41 @@ list<pair<pair<pair<Measure, Measure>, pair<Measure, Measure> >, pair<bool, doub
   return result;
 }
 
+// Serializable protocol
+
+/*
+istream& operator>>(istream& in, SJHydroNetModel& sink) {
+  sink.latitudes = DividedRange::streamExtract(in);
+  sink.longitudes = DividedRange::streamExtract(in);
+  sink.timeind = Indicator::streamExtract(in);
+
+  in >> *sink.net >> *sink.out;
+
+  // DO NOT INPUT INPUT DATA
+
+  in >> sink.precipMult >> " " >> sink.tempAdd >> " " >> sink.snowDiff;
+
+  // DO NOT INPUT CURRENT STATE
+  return in;
+}
+
+ostream& operator<<(ostream& os, SJHydroNetModel& source) {
+  source.latitudes.streamInsert(os);
+  source.longitudes.streamInsert(os);
+  source.timeind.streamInsert(os);
+
+  os << *source.net << *source.out;
+
+  // DO NOT OUTPUT INPUT DATA
+
+  os << source.precipMult << " " << source.tempAdd << " " << source.snowDiff;
+
+  // DO NOT OUTPUT CURRENT STATE
+
+  return os;
+}
+*/
+
 // Helper Functions
 GeographicMap<double>& SJHydroNetModel::weightedFraction(GeographicMap<double>& weights1, GeographicMap<double>& values1, GeographicMap<double>& weights2, GeographicMap<double>& values2) {
   return (weights1 * values1 + weights2 * values2).dividedBy(weights1 + weights2, values1);

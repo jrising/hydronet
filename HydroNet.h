@@ -3,11 +3,18 @@
 
 #include <float.h>
 #include <utils/ToString.h>
+#include <memory/SerializationTools.h>
+#include <list>
+#include <measure/Measure.h>
+#include <datastr/GeographicMap.h>
+#include <tools/hydro/DInfinityMap.h>
 
 using namespace std;
 
 namespace openworld {
-  class HydroNode {
+  void* nodeListConstructor(istream& in, PointerReference& reference);
+
+  class HydroNode : public IPointerSerializable {
   protected:
     // structural
     list< pair<double, HydroNode*> > edges;
@@ -264,6 +271,20 @@ namespace openworld {
 
       return copy;
     }
+
+    // Serializable protocol
+
+    virtual ostream& streamInsert(ostream& os, PointerTracker& tracker) const {
+      throw logic_error("HydroNode::streamInsert not implemented yet!");
+    }
+
+    virtual istream& streamExtract(istream& in, PointerReference& reference) {
+      throw logic_error("HydroNode::streamExtract not implemented yet!");
+    }
+    
+    static HydroNode* streamExtractPointer(istream& in, PointerReference& reference) {
+      throw logic_error("HydroNode::streamExtractPointer not implemented yet!");
+    }
   }; 
 
   class HydroSurfaceNode : public HydroNode {
@@ -393,6 +414,13 @@ namespace openworld {
 
       precipVolumeAfter = meltVolumeAfter = confAfter = confWeightAfter = 0;
     }
+
+    // Serialization
+
+    static HydroOutputNode* streamExtractPointer(istream& in, PointerReference& reference) {
+      throw logic_error("HydroOutputNode::streamExtractPointer not implemented yet!");
+    }
+
   };
     
   class HydroNet {
@@ -419,6 +447,14 @@ namespace openworld {
         
         nodemap_coarse[it->first] = nodes;
       }
+    }
+
+    virtual ~HydroNet() {
+      throw runtime_error("Deleting HydroNets is not currently implemented.");
+    }
+
+    HydroOutputNode* test(DInfinityMap& direction_fine) {
+      return NULL;
     }
 
     HydroOutputNode* generate(DInfinityMap& direction_fine, GeographicMap<bool>& mask_fine, GeographicMap<double>& slope_fine, double min_dist) {
@@ -713,6 +749,60 @@ namespace openworld {
 
       return edges;
     }
+
+    // Serializable protocol
+
+    friend void* nodeListConstructor(istream& in, PointerReference& reference);
+    
+    virtual istream& streamExtract(istream& in, PointerReference& reference) {
+      unsigned surfaces_count;
+      in >> surfaces_count;
+
+      for (unsigned ii = 0; ii < surfaces_count; ii++) {
+	unsigned index;
+	in >> index;
+	throw runtime_error("Need to have a extractor dictionary, and save the class names!");
+	//XXX: HydroNode* node = HydroNode::streamExtractPointer(in, reference);
+	//surfaces_coarse.insert(pair<unsigned, HydroNode*>(index, node));
+      }
+
+      unsigned nodemap_count;
+      in >> nodemap_count;
+
+      for (unsigned ii = 0; ii < nodemap_count; ii++) {
+	unsigned index;
+	in >> index;
+	
+	list<HydroNode*>* nodeList = (list<openworld::HydroNode*>*) reference.streamExtractPointer(in, nodeListConstructor);
+	nodemap_coarse.insert(pair<unsigned, list<HydroNode*>*>(index, nodeList));
+      }
+
+      return in;
+    }
+
+    virtual ostream& streamInsert(ostream& os, PointerTracker& tracker) const {
+      os << surfaces_coarse.size() << " ";
+      
+      for (map<unsigned, HydroNode*>::const_iterator it = surfaces_coarse.begin() ; it != surfaces_coarse.end(); it++) {
+	os << it->first << " ";
+	it->second->streamInsertPointer(os, tracker);
+      }
+
+      os << nodemap_coarse.size() << " ";
+
+      for (map<unsigned, list<HydroNode*>*>::const_iterator it = nodemap_coarse.begin() ; it != nodemap_coarse.end(); it++) {
+	os << it->first << " ";
+	if (tracker.streamInsertPointer(os, it->second)) {
+	  os << it->second->size() << " ";
+	
+	  for (list<HydroNode*>::iterator jt = it->second->begin(); jt != it->second->end(); ++jt)
+	    (*jt)->streamInsertPointer(os, tracker);
+	}
+      }
+
+      return os;
+    }
+
   };
 }
 

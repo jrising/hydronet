@@ -1,18 +1,25 @@
-#include "DInfinityMap.h"
+#include <tools/hydro/DInfinityMap.h>
 
 using namespace openworld;
 
 void checkCell(unsigned rr_from, unsigned cc_from, unsigned rr_to, unsigned cc_to, DInfinityMap& map, queue< pair<unsigned, unsigned> >& pending, GeographicMap<bool>& mask);
 
-// call as basinmask ang.tiff mask.tsv 32.2341 -2.324
+// call as basinmask ang.tiff mask.tsv OUTLAT OUTLON LAT0 LAT1 DLAT LON0 LON1 DLON
 int main(int argc, const char* argv[]) {
   MPI_Init(NULL,NULL); {
-	int rank,size;
-	MPI_Comm_rank(MCW,&rank);
-	MPI_Comm_size(MCW,&size);
+    int rank,size;
+    MPI_Comm_rank(MCW,&rank);
+    MPI_Comm_size(MCW,&size);
 
-    DInfinityMap map(*MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                                                           DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
+    double lat0 = atof(argv[5]);
+    double lat1 = atof(argv[6]);
+    double dlat = atof(argv[7]);
+    double lon0 = atof(argv[8]);
+    double lon1 = atof(argv[9]);
+    double dlon = atof(argv[10]);
+    
+    DInfinityMap map(*MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(lat0, lat1, dlat, Inds::lat),
+                                                           DividedRange::withEnds(lon0, lon1, dlon, Inds::lon),
                                                            argv[1]), false);
     MatrixGeographicMap<bool> mask(map.getLatitudes(), map.getLongitudes());
 
