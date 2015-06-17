@@ -1,11 +1,14 @@
 //#define USE_DUMMY
+//#define COMPARE_SNOW
 
 #include <iostream>
 #include <stdio.h>
 #include "../SJHydroNetModel.h"
 #include "../BackupSnowModel.h"
+#ifdef COMPARE_SNOW
 #include "../BalanceSnowModel.h"
 #include "../CompareSnowModel.h"
+#endif
 #include <datastr/GeographicMap.h>
 #include <datastr/ConstantGeographicMap.h>
 #include <datastr/DelayedTemporalGeographicMap.h>
@@ -86,7 +89,8 @@ int main(int argc, const char* argv[])
     DividedRange snowLatitude = DividedRange::withEnds(29.83333, 33.83333, .3333333, Inds::lat);
     DividedRange snowLongitude = DividedRange::withEnds(74.83333, 85.16667, .3333333, Inds::lon);
 
-    #ifndef USE_DUMMY
+#ifdef COMPARE_SNOW
+#ifndef USE_DUMMY
     const double initialSnowData[18][42] = {
       // [,1] [,2] [,3] [,4] [,5] [,6] [,7] [,8] [,9] [,10] [,11] [,12] [,13] [,14] [,15] [,16] [,17] [,18] [,19] [,20] [,21] [,22] [,23] [,24] [,25] [,26] [,27] [,28] [,29] [,30] [,31] [,32] [,33] [,34] [,35] [,36] [,37] [,38] [,39] [,40] [,41] [,42]
       { 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0},
@@ -114,9 +118,10 @@ int main(int argc, const char* argv[])
         initialSnow[ii][jj] = initialSnowData[ii][jj];
     }
     MatrixGeographicMap<double> initialVolumes(latitudes, longitudes, initialSnow);
-    #else
+#else
     ConstantGeographicMap<double> initialVolumes(latitudes, longitudes, 0);
-    #endif
+#endif
+#endif
 
     DividedRange snowCoverTime = DividedRange::withMax(DividedRange::toTime(1988, 1, 1),
                                                        DividedRange::toTime(2003, 5, 1),
@@ -130,15 +135,19 @@ int main(int argc, const char* argv[])
                                                                                   snowCoverTime, "snows.tsv", NULL, '\t'),
                                                      fullTime,
                                                      .25, Measure(DividedRange::toTime(1988, 1, 15), Inds::unixtime));
-    #ifdef USE_DUMMY
+#ifndef COMPARE_SNOW
+    model.setSnowModel(snowCover);
+#else
+#ifdef USE_DUMMY
     DummyCompareSnowModel* snowCompare = new DummyCompareSnowModel(*snowCover, initialVolumes, snowCoverTime);
-    #else
+#else
     ScaledGeographicMap<double> scaledInitialCover((*snowCover)[Measure(DividedRange::toTime(1988, 1, 1), Inds::unixtime)], latitudes, longitudes, 0.0);
     BalanceSnowModel* snowModel = new BalanceSnowModel(initialVolumes, scaledInitialCover, snowCoverTime, 9.178893e-01, 1.396938e-07, -7.527681e-08, 1.119644e-09);
     unlink("snowcompare.tsv");
     CompareSnowModel* snowCompare = new CompareSnowModel(*snowCover, *snowModel, snowCoverTime, "snowcompare.tsv");
     model.setSnowModel(snowCompare);
-    #endif
+#endif
+#endif
 
     cout << "Loading elevation" << endl;
     model.setElevation(MatrixGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
