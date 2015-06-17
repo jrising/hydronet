@@ -1,9 +1,0 @@
-#include <stdio.h>
-#include "../datastr/Matrix.h"
-#include "../datastr/FileFormats.h"
-
-int main(int argc, const char* argv[])
-{
-  // Call as extractbin FILE.bin lat0 lon0 lat1 lon1
-
-}
