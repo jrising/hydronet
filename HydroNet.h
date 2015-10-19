@@ -5,6 +5,7 @@
 #include <utils/ToString.h>
 #include <memory/SerializationTools.h>
 #include <list>
+#include <queue>
 #include <measure/Measure.h>
 #include <datastr/GeographicMap.h>
 #include <tools/hydro/DInfinityMap.h>
@@ -180,7 +181,7 @@ namespace openworld {
       R_A = 3 * N * sin(.131*N - .95*latrad); // 36 at equator
       //else
       //R_A = 118 * pow(N, .2) * sin(.131*N - .2*latrad); // 193.9626 at equator -- seems way too high!
-      
+
       double R_S = R_A * (.5 + .25 * light); // 27 at full bright
 
       // TODO: add 0:00012 * elevation
@@ -228,7 +229,7 @@ namespace openworld {
     list<pair<pair<HydroNode*, HydroNode*>, double> > recursiveGetAllEdges() {
       recursiveCalcDone = true;
       list<pair<pair<HydroNode*, HydroNode*>, double> > result;
-      
+
       list< pair<double, HydroNode*> >::iterator it;
       for (it = edges.begin(); it != edges.end(); it++) {
         result.push_back(pair<pair<HydroNode*, HydroNode*>, double>(pair<HydroNode*, HydroNode*>(this, it->second), it->first));
@@ -281,11 +282,11 @@ namespace openworld {
     virtual istream& streamExtract(istream& in, PointerReference& reference) {
       throw logic_error("HydroNode::streamExtract not implemented yet!");
     }
-    
+
     static HydroNode* streamExtractPointer(istream& in, PointerReference& reference) {
       throw logic_error("HydroNode::streamExtractPointer not implemented yet!");
     }
-  }; 
+  };
 
   class HydroSurfaceNode : public HydroNode {
   private:
@@ -316,7 +317,7 @@ namespace openworld {
     double calcManningSurface(double volume) {
       if (volume < minToFlow)
         return 0;
-      
+
       double height = volume / nodeArea;
       double vel = calcManning(.025, height, max(height / (2 * distAlong), slope));
       return min(vel, maxVelocity); //90 * sqrt(height / 2)); //(water terminal velocity)
@@ -380,7 +381,7 @@ namespace openworld {
     HydroOutputNode()
       : HydroNode(0, 0, 0, 0, 0, 0, Measure(0, Inds::lat), Measure(0, Inds::lon)) {
     }
-    
+
     virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate) {
       HydroNode* copy = new HydroOutputNode(*this);
       copy->translateEdges(*this, translate);
@@ -422,7 +423,7 @@ namespace openworld {
     }
 
   };
-    
+
   class HydroNet {
   protected:
     GeographicMap<double> mask_coarse;
@@ -436,7 +437,7 @@ namespace openworld {
 
     HydroNet(HydroNet& copy, map<HydroNode*, HydroNode*>& translate)
       : mask_coarse(copy.mask_coarse) {
-      
+
       for (map<unsigned, HydroNode*>::iterator it = copy.surfaces_coarse.begin(); it != copy.surfaces_coarse.end(); it++) {
         surfaces_coarse[it->first] = HydroNode::getCopy(it->second, translate);
       }
@@ -444,7 +445,7 @@ namespace openworld {
         list<HydroNode*>* nodes = new list<HydroNode*>();
         for (list<HydroNode*>::iterator lit = it->second->begin(); lit != it->second->end(); lit++)
           nodes->push_back(HydroNode::getCopy(*lit, translate));
-        
+
         nodemap_coarse[it->first] = nodes;
       }
     }
@@ -475,13 +476,13 @@ namespace openworld {
           unsigned paths = 0;
 
           map<unsigned, pair<double, HydroNode*> > edges;
-                    
+
           // Loop over all elevation cells within
           for (Measure lat = mask_coarse.getLatitudes().getCellMin(rr) + mask_fine.getLatitudes().getWidths() / 2;
                lat < mask_coarse.getLatitudes().getCellMax(rr); lat += mask_fine.getLatitudes().getWidths())
             for (Measure lon = mask_coarse.getLongitudes().getCellMin(cc) + mask_fine.getLongitudes().getWidths() / 2;
                  lon < mask_coarse.getLongitudes().getCellMax(cc); lon += mask_fine.getLongitudes().getWidths()) {
-              
+
               if (lat < mask_fine.getLatitudes().getMin() || lat >= mask_fine.getLatitudes().getMax() ||
                   lon < mask_fine.getLongitudes().getMin() || lon >= mask_fine.getLongitudes().getMax() ||
                   mask_fine.getDouble(lat, lon) == 0)
@@ -503,7 +504,7 @@ namespace openworld {
                   // connect this to the river out
                   if (rivers.find(mask_fine.getIndex(ll.first, ll.second)) == rivers.end())
                     generateRiver(ll.first, ll.second, rivers, direction_fine, mask_fine, slope_fine, out, ignore, min_dist);
-                  
+
                   addEdge(edges, mask_fine.getIndex(ll.first, ll.second), llp.second, rivers[mask_fine.getIndex(ll.first, ll.second)]);
                 } else {
                   total_dist += llp.second * mask_fine.calcCellSpan(lat, lon);
@@ -532,7 +533,7 @@ namespace openworld {
 
       return out;
     }
-    
+
     // generate a river out of this cell
     void generateRiver(Measure lat, Measure lon, map<unsigned, HydroNode*>& rivers, DInfinityMap& direction_fine, GeographicMap<bool>& mask_fine, GeographicMap<double>& slope_fine, HydroOutputNode* out, HydroOutputNode* ignore, double min_dist, double bigger = 0) {
       //cout << "Generating river at " << lat << ", " << lon << " (" << bigger << ")" << endl;
@@ -547,7 +548,7 @@ namespace openworld {
       // Follow this out of the cell
       queue< pair< pair<Measure, Measure>, double> > pending;
       pending.push(pair< pair<Measure, Measure>, double>(pair<Measure, Measure>(lat, lon), 1.0));
-              
+
       while (!pending.empty()) {
         pair< pair<Measure, Measure>, double> llp = pending.front();
         pair<Measure, Measure> ll = llp.first;
@@ -562,7 +563,7 @@ namespace openworld {
 
           if (rivers.find(mask_fine.getIndex(ll.first, ll.second)) == rivers.end())
             generateRiver(ll.first, ll.second, rivers, direction_fine, mask_fine, slope_fine, out, ignore, min_dist);
-          
+
           addEdge(edges, mask_fine.getIndex(ll.first, ll.second), llp.second, rivers[mask_fine.getIndex(ll.first, ll.second)]);
         } else {
           //cout << "Cont to " << ll.first << ", " << ll.second << endl;
@@ -588,7 +589,7 @@ namespace openworld {
       HydroNode* river = new HydroRiverNode(total_dist * mask_fine.calcCellSpan(lat, lon),
                                             total_dist, mask_fine.calcCellSpan(lat, lon),
                                             total_slope / weight_slope, lat, lon);
-      
+
       river->setEdges(edges);
       rivers[mask_fine.getIndex(lat, lon)] = river;
       addToNodeMap(river, mask_coarse.getIndex(lat, lon));
@@ -658,7 +659,7 @@ namespace openworld {
 
     void addToNodeMap(HydroNode* node, unsigned index) {
       list<HydroNode*>* nodes = NULL;
-      
+
       if (nodemap_coarse.find(index) == nodemap_coarse.end()) {
         nodes = new list<HydroNode*>();
         nodemap_coarse[index] = nodes;
@@ -695,7 +696,7 @@ namespace openworld {
         if (step < maxstep)
           maxstep = step;
       }
-      
+
       return maxstep;
     }
 
@@ -734,14 +735,14 @@ namespace openworld {
     }
 
     // diagnostics
-    
+
     list<pair<pair<HydroNode*, HydroNode*>, double> > getAllEdges() {
       list<pair<pair<HydroNode*, HydroNode*>, double> > edges;
-      
+
       map<unsigned, HydroNode*>::iterator it;
       for (it = surfaces_coarse.begin(); it != surfaces_coarse.end(); it++)
         it->second->resetRecursiveCalculation();
-    
+
       for (it = surfaces_coarse.begin(); it != surfaces_coarse.end(); it++) {
         list<pair<pair<HydroNode*, HydroNode*>, double> > edgeSet = it->second->recursiveGetAllEdges();
         edges.insert(edges.end(), edgeSet.begin(), edgeSet.end());
@@ -753,7 +754,7 @@ namespace openworld {
     // Serializable protocol
 
     friend void* nodeListConstructor(istream& in, PointerReference& reference);
-    
+
     virtual istream& streamExtract(istream& in, PointerReference& reference) {
       unsigned surfaces_count;
       in >> surfaces_count;
@@ -772,7 +773,7 @@ namespace openworld {
       for (unsigned ii = 0; ii < nodemap_count; ii++) {
 	unsigned index;
 	in >> index;
-	
+
 	list<HydroNode*>* nodeList = (list<openworld::HydroNode*>*) reference.streamExtractPointer(in, nodeListConstructor);
 	nodemap_coarse.insert(pair<unsigned, list<HydroNode*>*>(index, nodeList));
       }
@@ -782,7 +783,7 @@ namespace openworld {
 
     virtual ostream& streamInsert(ostream& os, PointerTracker& tracker) const {
       os << surfaces_coarse.size() << " ";
-      
+
       for (map<unsigned, HydroNode*>::const_iterator it = surfaces_coarse.begin() ; it != surfaces_coarse.end(); it++) {
 	os << it->first << " ";
 	it->second->streamInsertPointer(os, tracker);
@@ -794,7 +795,7 @@ namespace openworld {
 	os << it->first << " ";
 	if (tracker.streamInsertPointer(os, it->second)) {
 	  os << it->second->size() << " ";
-	
+
 	  for (list<HydroNode*>::iterator jt = it->second->begin(); jt != it->second->end(); ++jt)
 	    (*jt)->streamInsertPointer(os, tracker);
 	}
