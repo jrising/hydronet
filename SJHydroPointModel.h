@@ -17,7 +17,7 @@ class SJHydroPointModel : public SJHydroModel<double, double, bool> {
   Measure now;
 
  public:
-  SJHydroPointModel(Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double surfaceEvaporationFactor, double riverEvaporationFactor, doubl mmdayToVolume);
+  SJHydroPointModel(Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, doubl mmdayToVolume);
   SJHydroPointModel(SJHydroPointModel& copy);
 
   ~SJHydroPointModel();

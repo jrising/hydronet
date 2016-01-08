@@ -16,6 +16,8 @@ class SJHydroModel {
  protected:
   Indicator timeind;
 
+  int verbose;
+  
   double precipMult;
   double tempAdd;
   double snowDiff;
@@ -36,7 +38,7 @@ class SJHydroModel {
   Measure now;
 
  public:
-  SJHydroModel(Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double surfaceEvaporationFactor, double riverEvaporationFactor, TNumeric& initialGroundRainVolume, TNumeric& initialGroundMeltVolume, TNumeric& initialGroundConf);
+  SJHydroModel(Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, TNumeric& initialGroundRainVolume, TNumeric& initialGroundMeltVolume, TNumeric& initialGroundConf);
   SJHydroModel(SJHydroModel& copy);
 
   virtual ~SJHydroModel();
@@ -47,6 +49,7 @@ class SJHydroModel {
   double meltRunoffCoefficient;
   double groundCoefficient;
   double groundToBaseflowDay;
+  double rainOnSnowCoefficient;
   double surfaceEvaporationFactor;
   double riverEvaporationFactor;
 

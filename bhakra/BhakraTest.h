@@ -40,6 +40,7 @@ class BhakraTest : public ModelTest {
     params.insert(pair<string, Measure>("meltRunoffCoefficient", Measure(model->meltRunoffCoefficient, LinearIndicator("runoffCoefficient", Units::none, 0, 1))));
     params.insert(pair<string, Measure>("groundCoefficient", Measure(model->groundCoefficient, LinearIndicator("groundCoefficient", Units::none, 0, 1))));
     params.insert(pair<string, Measure>("groundToBaseflowDay", Measure(model->groundToBaseflowDay, LinearIndicator("timePortion", Units::none, 0, 1))));
+    params.insert(pair<string, Measure>("rainOnSnowCoefficient", Measure(model->rainOnSnowCoefficient, LinearIndicator("runoffCoefficient", Units::none, 0, 1))));
 
 #ifdef USE_EVAP
     params.insert(pair<string, Measure>("surfaceEvaporationFactor", Measure(model->surfaceEvaporationFactor, LinearIndicator("evaporationFactor", Units::none, 0, 2))));
@@ -56,6 +57,7 @@ class BhakraTest : public ModelTest {
     model->meltRunoffCoefficient = params.find("meltRunoffCoefficient")->second.getValue();
     model->groundCoefficient = params.find("groundCoefficient")->second.getValue();
     model->groundToBaseflowDay = params.find("groundToBaseflowDay")->second.getValue();
+    model->rainOnSnowCoefficient = params.find("rainOnSnowCoefficient")->second.getValue();
 
 #ifdef USE_EVAP
     if (params.find("surfaceEvaporationFactor") == params.end()) {
@@ -84,6 +86,7 @@ class BhakraTest : public ModelTest {
       copy.insert(pair<string, Measure>("rainRunoffCoefficient", params.find("rainRunoffCoefficient")->second.random()));
       copy.insert(pair<string, Measure>("meltRunoffCoefficient", params.find("meltRunoffCoefficient")->second.random()));
       copy.insert(pair<string, Measure>("groundToBaseflowDay", params.find("groundToBaseflowDay")->second.random()));
+      copy.insert(pair<string, Measure>("rainOnSnowCoefficient", params.find("rainOnSnowCoefficient")->second.random()));
       copy.insert(pair<string, Measure>("groundCoefficient", params.find("groundCoefficient")->second.random()));
       } else {*/
       // Modify the parameters
@@ -111,7 +114,7 @@ class BhakraTest : public ModelTest {
   virtual void prepare() {
     model = new SJHydroNetModel(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),
                                 DividedRange::withEnds(74.875, 85.125, .25, Inds::lon), Inds::unixtime,
-                                3.06469, 1.0025e-05, 0.0305725, 0.0159555, 0.0104312, 0.0136191, 0, 0);
+                                3.06469, 1.0025e-05, 0.0305725, 0.0159555, 0.0104312, 0.0136191, (4.2 / 325), 0, 0);
                                 //2.81594, 0.0, 0.0331202, 0.0166743, 0.0105677, 0.0153526, 0.0, 0.0);
 
     cout << "Setting up model" << endl;
@@ -185,13 +188,16 @@ class BhakraTest : public ModelTest {
 
     cout << "Initialization complete." << endl;
 
+    model->setVerbosity(0);
     model->runTo(DividedRange::toTime(1988, 1, 1));
   }
 
   virtual double evaluate() {
     cout << "Copy HydroNet" << endl;
     SJHydroNetModel* copy = new SJHydroNetModel(*model);
-    cout << "Using " << copy->meltDegreeDayFactor << ", " << copy->meltDegreeDaySlope << ", " << copy->rainRunoffCoefficient << ", " << copy->meltRunoffCoefficient << ", " << copy->groundCoefficient << ", " << copy->groundToBaseflowDay << ", " << copy->surfaceEvaporationFactor << ", " << copy->riverEvaporationFactor << endl;
+    cout << "Using " << copy->meltDegreeDayFactor << ", " << copy->meltDegreeDaySlope << ", " << copy->rainRunoffCoefficient << ", " << copy->meltRunoffCoefficient << ", " << copy->groundCoefficient << ", " << copy->groundToBaseflowDay << ", " << copy->rainOnSnowCoefficient << ", " << copy->surfaceEvaporationFactor << ", " << copy->riverEvaporationFactor << endl;
+
+    copy->setVerbosity(0);
 
     unsigned beforeCount = copy->getOutFlowsCount();
     copy->runTo(DividedRange::toTime(2000, 1, 1));
@@ -229,6 +235,7 @@ class BhakraTest : public ModelTest {
       copy->meltRunoffCoefficient = model->meltRunoffCoefficient;
       copy->groundCoefficient = model->groundCoefficient;
       copy->groundToBaseflowDay = model->groundToBaseflowDay;
+      copy->rainOnSnowCoefficient = model->rainOnSnowCoefficient;
 
 #ifdef USE_EVAP
       copy->surfaceEvaporationFactor = model->surfaceEvaporationFactor;
@@ -236,7 +243,7 @@ class BhakraTest : public ModelTest {
 #endif
     }
 
-    cout << "Using " << copy->meltDegreeDayFactor << ", " << copy->meltDegreeDaySlope << ", " << copy->rainRunoffCoefficient << ", " << copy->meltRunoffCoefficient << ", " << copy->groundCoefficient << ", " << copy->groundToBaseflowDay << ", " << copy->surfaceEvaporationFactor << ", " << copy->riverEvaporationFactor << endl;
+    cout << "Using " << copy->meltDegreeDayFactor << ", " << copy->meltDegreeDaySlope << ", " << copy->rainRunoffCoefficient << ", " << copy->meltRunoffCoefficient << ", " << copy->groundCoefficient << ", " << copy->groundToBaseflowDay << ", " << copy->rainOnSnowCoefficient << ", " << copy->surfaceEvaporationFactor << ", " << copy->riverEvaporationFactor << endl;
 
     double rsqr2 = yearEvaluate();
 

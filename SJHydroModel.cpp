@@ -11,6 +11,7 @@ SJHydroModel::SJHydroModel(Indicator timeind, double meltDegreeDayFactor, double
   snowDiff = 0;
 
   now = 0;
+  verbose = 1;
 
   this->meltDegreeDayFactor = meltDegreeDayFactor;
   this->meltDegreeDaySlope = meltDegreeDaySlope;
@@ -18,6 +19,7 @@ SJHydroModel::SJHydroModel(Indicator timeind, double meltDegreeDayFactor, double
   this->meltRunoffCoefficient = meltRunoffCoefficient;
   this->groundCoefficient = groundCoefficient;
   this->groundToBaseflowDay = groundToBaseflowDay;
+  this->rainOnSnowCoefficient = rainOnSnowCoefficient;
   this->surfaceEvaporationFactor = surfaceEvaporationFactor;
   this->riverEvaporationFactor = riverEvaporationFactor;
 }
@@ -34,6 +36,7 @@ SJHydroModel::SJHydroModel(SJHydroModel& copy)
   meltRunoffCoefficient = copy.meltRunoffCoefficient;
   groundCoefficient = copy.groundCoefficient;
   groundToBaseflowDay = copy.groundToBaseflowDay;
+  rainOnSnowCoefficient = copy.rainOnSnowCoefficient;
   surfaceEvaporationFactor = copy.surfaceEvaporationFactor;
   riverEvaporationFactor = copy.riverEvaporationFactor;
 
@@ -115,7 +118,7 @@ SJHydroModel::internalStepDay(TNumeric& nowPrecipitation, TNumeric& nowSurfaceTe
 
   // snow-related calculations
   TNumeric& newRainOnSnowRainVolume = newRainAllVolume * fracSnowCover * validSnowCover; // uses melt runoff, because rain on snow like melt
-  TNumeric& newRainOnSnowMeltVolume = (4.2 / 325) * (nowSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * newRainOnSnowRainVolume;
+  TNumeric& newRainOnSnowMeltVolume = rainOnSnowCoefficient * (nowSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * newRainOnSnowRainVolume;
   TNumeric& fullMeltDegreeDayFactor = (meltDegreeDayFactor + meltDegreeDaySlope * *elevation);
   //TNumeric& validMeltDegreeDayFactor = fullMeltDegreeDayFactor * (fullMeltDegreeDayFactor > 0);
   TNumeric& newDegreeDayMeltVolume = fullMeltDegreeDayFactor * fracSnowCover * *mmdayToVolume * (nowSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * validSnowCover;

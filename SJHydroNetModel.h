@@ -22,7 +22,8 @@ class SJHydroNetModel {
   DividedRange latitudes;
   DividedRange longitudes;
   Indicator timeind;
-
+  int verbose;
+  
   // Inputs
   HydroNet* net;
   HydroOutputNode* out;
@@ -49,7 +50,7 @@ class SJHydroNetModel {
   Measure now;
 
  public:
-  SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double surfaceEvaporationFactor, double riverEvaporationFactor, string allcells = "");
+  SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, string allcells = "");
   SJHydroNetModel(SJHydroNetModel& copy);
 
   ~SJHydroNetModel();
@@ -60,6 +61,7 @@ class SJHydroNetModel {
   double meltRunoffCoefficient;
   double groundCoefficient;
   double groundToBaseflowDay;
+  double rainOnSnowCoefficient;
   double surfaceEvaporationFactor;
   double riverEvaporationFactor;
 
@@ -73,7 +75,8 @@ class SJHydroNetModel {
   void setPrecipitationScaling(double precipMult = 1);
   void setTemperatureAddition(double tempAdd = 0);
   void setSnowCoverDifference(double snowDiff = 0);
-
+  void setVerbosity(int verbose);
+  
   time_t getTime();
   void runTo(time_t time);
   void stepDay();

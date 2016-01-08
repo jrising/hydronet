@@ -61,8 +61,10 @@ namespace openworld {
     }
 
   public:
-    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate) = 0;
+    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate, list<HydroNode*>& created) = 0;
 
+    virtual ~HydroNode() {}
+    
     Measure getLatitude() {
       return latitude;
     }
@@ -255,20 +257,21 @@ namespace openworld {
         }
     }
 
-    void translateEdges(HydroNode& copy, map<HydroNode*, HydroNode*>& translate) {
+    void translateEdges(HydroNode& copy, map<HydroNode*, HydroNode*>& translate, list<HydroNode*>& created) {
       edges.clear();
 
       for (list< pair<double, HydroNode*> >::iterator it = copy.edges.begin(); it != copy.edges.end(); it++)
-        edges.push_back(pair<double, HydroNode*>(it->first, HydroNode::getCopy(it->second, translate)));
+        edges.push_back(pair<double, HydroNode*>(it->first, HydroNode::getCopy(it->second, translate, created)));
     }
 
-    static HydroNode* getCopy(HydroNode* node, map<HydroNode*, HydroNode*>& translate) {
+    static HydroNode* getCopy(HydroNode* node, map<HydroNode*, HydroNode*>& translate, list<HydroNode*>& created) {
       map<HydroNode*, HydroNode*>::iterator it = translate.find(node);
       if (it != translate.end())
         return it->second;
 
-      HydroNode* copy = node->clone(translate);
+      HydroNode* copy = node->clone(translate, created);
       translate[node] = copy;
+      created.push_back(copy);
 
       return copy;
     }
@@ -298,9 +301,9 @@ namespace openworld {
       : HydroNode(nodeArea, distAlong, distAcross, slope, minSurfaceToFlow, maxSurfaceVelocity, latitude, longitude) {
     }
 
-    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate) {
+    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate, list<HydroNode*>& created) {
       HydroNode* copy = new HydroSurfaceNode(*this);
-      copy->translateEdges(*this, translate);
+      copy->translateEdges(*this, translate, created);
 
       return copy;
     }
@@ -334,9 +337,9 @@ namespace openworld {
       : HydroNode(nodeArea, distAlong, distAcross, slope, minRiverToFlow, maxRiverVelocity, latitude, longitude) {
     }
 
-    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate) {
+    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate, list<HydroNode*>& created) {
       HydroNode* copy = new HydroRiverNode(*this);
-      copy->translateEdges(*this, translate);
+      copy->translateEdges(*this, translate, created);
 
       return copy;
     }
@@ -382,9 +385,9 @@ namespace openworld {
       : HydroNode(0, 0, 0, 0, 0, 0, Measure(0, Inds::lat), Measure(0, Inds::lon)) {
     }
 
-    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate) {
+    virtual HydroNode* clone(map<HydroNode*, HydroNode*>& translate, list<HydroNode*>& created) {
       HydroNode* copy = new HydroOutputNode(*this);
-      copy->translateEdges(*this, translate);
+      copy->translateEdges(*this, translate, created);
 
       return copy;
     }
@@ -430,6 +433,9 @@ namespace openworld {
     map<unsigned, HydroNode*> surfaces_coarse; // mask_coarse index -> surface node
     map<unsigned, list<HydroNode*>*> nodemap_coarse; // mask_coarse index -> many nodes
 
+    // List of nodes created (currently just during copy)
+    list<HydroNode*> created;
+    
   public:
     HydroNet(GeographicMap<double>& mask_coarse)
       : mask_coarse(mask_coarse) {
@@ -439,21 +445,22 @@ namespace openworld {
       : mask_coarse(copy.mask_coarse) {
 
       for (map<unsigned, HydroNode*>::iterator it = copy.surfaces_coarse.begin(); it != copy.surfaces_coarse.end(); it++) {
-        surfaces_coarse[it->first] = HydroNode::getCopy(it->second, translate);
+        surfaces_coarse[it->first] = HydroNode::getCopy(it->second, translate, created);
       }
       for (map<unsigned, list<HydroNode*>*>::iterator it = copy.nodemap_coarse.begin(); it != copy.nodemap_coarse.end(); it++) {
         list<HydroNode*>* nodes = new list<HydroNode*>();
         for (list<HydroNode*>::iterator lit = it->second->begin(); lit != it->second->end(); lit++)
-          nodes->push_back(HydroNode::getCopy(*lit, translate));
+          nodes->push_back(HydroNode::getCopy(*lit, translate, created));
 
         nodemap_coarse[it->first] = nodes;
       }
     }
 
     virtual ~HydroNet() {
-      throw runtime_error("Deleting HydroNets is not currently implemented.");
+      for (list<HydroNode*>::iterator lit = created.begin(); lit != created.end(); lit++)
+	delete *lit;
     }
-
+    
     HydroOutputNode* test(DInfinityMap& direction_fine) {
       return NULL;
     }

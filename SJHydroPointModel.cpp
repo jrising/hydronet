@@ -4,8 +4,8 @@
 #include <memory/Transients.h>
 #include <utils/Timer.h>
 
-SJHydroPointModel::SJHydroPointModel(Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double surfaceEvaporationFactor, double riverEvaporationFactor, double mmdayToVolume)
-  : SJHydroModel(timeind, meltDegreeDayFactor, meltDegreeDaySlope, rainRunoffCoefficient, meltRunoffCoefficient, groundCoefficient, groundToBaseflowDay, surfaceEvaporationFactor, riverEvaporationFactor) {
+SJHydroPointModel::SJHydroPointModel(Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, double mmdayToVolume)
+  : SJHydroModel(timeind, meltDegreeDayFactor, meltDegreeDaySlope, rainRunoffCoefficient, meltRunoffCoefficient, groundCoefficient, groundToBaseflowDay, rainOnSnowCoefficient, surfaceEvaporationFactor, riverEvaporationFactor) {
   precipitation = NULL;
   surfaceTemp = NULL;
   snowModel = NULL;

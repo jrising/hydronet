@@ -163,6 +163,8 @@ int main(int argc, const char* argv[])
 
     cout << "Initialization complete." << endl;
 
+    model.setVerbosity(0);
+    
     try {
       model.runTo(DividedRange::toTime(2004, 12, 31));
     } catch (exception& e) {

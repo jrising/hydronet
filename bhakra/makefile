@@ -4,7 +4,7 @@ CC = mpic++
 DEBUG = -g
 OWD = ~/projects/openworld
 CFLAGS = -Wall -c $(DEBUG) -I $(OWD) -O3 -I $(OWD)/ext/gzstream
-LFLAGS = -Wall $(DEBUG) -O3 -L. -lgzstream -lz
+LFLAGS = -Wall $(DEBUG) -O3 -L. -L $(OWD)/ext/gzstream -lgzstream -lz
 
 OBJS_MAIN = ../SJHydroNetModel.o ../HydroNet.o $(OWD)/geotiff/tiffIO.o $(OWD)/geotiff/commonLib.o $(OWD)/datastr/GeographicMap.o $(OWD)/memory/Transients.o $(OWD)/dims/Dims.o $(OWD)/dims/Dimensions.o $(OWD)/dims/Dimensionless.o $(OWD)/measure/Units.o $(OWD)/measure/Inds.o $(OWD)/dims/GlobalDimensions.o $(OWD)/utils/Timer.o $(OWD)/ext/gzstream/gzstream.o
 

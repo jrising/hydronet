@@ -5,7 +5,7 @@
 #include <utils/Timer.h>
 #include <datastr/ConstantGeographicMap.h>
 
-SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double surfaceEvaporationFactor, double riverEvaporationFactor, string allcells)
+SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, string allcells)
   : latitudes(latitudes), longitudes(longitudes), timeind(timeind), now(0, timeind) {
   precipitation = NULL;
   surfaceTemp = NULL;
@@ -18,6 +18,7 @@ SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes
   snowDiff = 0;
 
   now = 0;
+  verbose = 1;
   this->allcells = allcells;
 
   this->meltDegreeDayFactor = meltDegreeDayFactor;
@@ -26,6 +27,7 @@ SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes
   this->meltRunoffCoefficient = meltRunoffCoefficient;
   this->groundCoefficient = groundCoefficient;
   this->groundToBaseflowDay = groundToBaseflowDay;
+  this->rainOnSnowCoefficient = rainOnSnowCoefficient;
   this->surfaceEvaporationFactor = surfaceEvaporationFactor;
   this->riverEvaporationFactor = riverEvaporationFactor;
 
@@ -44,7 +46,8 @@ SJHydroNetModel::SJHydroNetModel(SJHydroNetModel& copy)
 
   map<HydroNode*, HydroNode*> translate;
   net = new HydroNet(*copy.net, translate);
-  out = (HydroOutputNode*) HydroNode::getCopy(copy.out, translate);
+  list<HydroNode*> ignore;
+  out = (HydroOutputNode*) HydroNode::getCopy(copy.out, translate, ignore);
 
   precipitation = copy.precipitation->clone();
   surfaceTemp = copy.surfaceTemp->clone();
@@ -66,6 +69,7 @@ SJHydroNetModel::SJHydroNetModel(SJHydroNetModel& copy)
   meltRunoffCoefficient = copy.meltRunoffCoefficient;
   groundCoefficient = copy.groundCoefficient;
   groundToBaseflowDay = copy.groundToBaseflowDay;
+  rainOnSnowCoefficient = copy.rainOnSnowCoefficient;
   surfaceEvaporationFactor = copy.surfaceEvaporationFactor;
   riverEvaporationFactor = copy.riverEvaporationFactor;
 
@@ -137,6 +141,10 @@ void SJHydroNetModel::setSnowCoverDifference(double snowDiff) {
   this->snowDiff = snowDiff;
 }
 
+void SJHydroNetModel::setVerbosity(int verbose) {
+  this->verbose = verbose;
+}
+
 time_t SJHydroNetModel::getTime() {
   return (time_t) now.getValue();
 }
@@ -156,7 +164,8 @@ void SJHydroNetModel::runTo(long time) {
 }
 
 void SJHydroNetModel::stepDay() {
-  cout << "Beginning step" << endl;
+  if (verbose)
+    cout << "Beginning step" << endl;
   if (now.getValue() == 0) {
     // What is the earliest time we can handle?
     cout << "Start time: " << precipitation->getTimes().getMin() << ", " << surfaceTemp->getTimes().getMin() << ", " << snowModel->getTimes().getMin() << endl;
@@ -167,7 +176,8 @@ void SJHydroNetModel::stepDay() {
   else
     now += 1/360.0;
 
-  cout << "Rescaling maps" << endl;
+  if (verbose)
+    cout << "Rescaling maps" << endl;
   ScaledGeographicMap<double> scaledPrecipitation((*precipitation)[now], latitudes, longitudes, 0.0);
   ScaledGeographicMap<double> scaledSurfaceTemp((*surfaceTemp)[now], latitudes, longitudes, 0.0);
   ScaledGeographicMap<double> scaledSnowCover((*snowModel)[now], latitudes, longitudes, 0.0);
@@ -188,13 +198,15 @@ void SJHydroNetModel::stepDay() {
     cout << rr << ", " << cc << ": " << snowModel->debugInfo(rr, cc) << endl;*/
 
   // Add precipitation
-  cout << "Determining valid inputs" << endl;
+  if (verbose)
+    cout << "Determining valid inputs" << endl;
   GeographicMap<bool>& validPrecipitation = scaledPrecipitation >= 0.0;
   GeographicMap<bool>& validSurfaceTemp = scaledSurfaceTemp >= 100.0;
   GeographicMap<bool>& validSnowCover = scaledSnowCover >= 0.0;
   GeographicMap<bool>& aboveZeroCelsius = scaledSurfaceTemp >= ZERO_CELSIUS;
 
-  cout << "Adding surface flow" << endl;
+  if (verbose)
+    cout << "Adding surface flow" << endl;
   // rain-related calculations
   GeographicMap<double>& rainPortion = ((scaledSurfaceTemp - SNOW_ALL_TEMPERATURE) / (RAIN_ALL_TEMPERATURE - SNOW_ALL_TEMPERATURE)) * (scaledSurfaceTemp > SNOW_ALL_TEMPERATURE) * (scaledSurfaceTemp <= RAIN_ALL_TEMPERATURE) + (scaledSurfaceTemp > RAIN_ALL_TEMPERATURE);
   GeographicMap<double>& newRainAllVolume = rainPortion * scaledPrecipitation * *mmdayToVolume * (validPrecipitation * validSurfaceTemp);
@@ -203,7 +215,7 @@ void SJHydroNetModel::stepDay() {
 
   // snow-related calculations
   GeographicMap<double>& newRainOnSnowRainVolume = newRainAllVolume * fracSnowCover * validSnowCover; // uses melt runoff, because rain on snow like melt
-  GeographicMap<double>& newRainOnSnowMeltVolume = (4.2 / 325) * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * newRainOnSnowRainVolume;
+  GeographicMap<double>& newRainOnSnowMeltVolume = rainOnSnowCoefficient * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * newRainOnSnowRainVolume;
   GeographicMap<double>& fullMeltDegreeDayFactor = (meltDegreeDayFactor + meltDegreeDaySlope * *elevation);
   //GeographicMap<double>& validMeltDegreeDayFactor = fullMeltDegreeDayFactor * (fullMeltDegreeDayFactor > 0);
   GeographicMap<double>& newDegreeDayMeltVolume = fullMeltDegreeDayFactor * fracSnowCover * *mmdayToVolume * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * validSnowCover;
@@ -243,7 +255,8 @@ void SJHydroNetModel::stepDay() {
   
   double fracyear = ptm->tm_yday / 365.0;
 
-  cout << "Modelling flow" << endl;
+  if (verbose)
+    cout << "Modelling flow" << endl;
   unsigned elapsed = 0;
 
   net->updateDay(scaledSurfaceTemp, fracSnowCover, newRainVolume, fracyear, surfaceEvaporationFactor, riverEvaporationFactor);
@@ -255,7 +268,8 @@ void SJHydroNetModel::stepDay() {
     if (step > DividedRange::toTimespan(1).getValue() - elapsed)
       step = DividedRange::toTimespan(1).getValue() - elapsed;
 
-    cout << "Elapsed: " << elapsed << ", Timestep: " << step << endl;
+    if (verbose)
+      cout << "Elapsed: " << elapsed << ", Timestep: " << step << endl;
 
     net->step(step, newRainVolume, newMeltVolume, newVolumeConf);
 
@@ -267,7 +281,8 @@ void SJHydroNetModel::stepDay() {
   out->reset();
   outFlowRain.push_back(out->getPrecipVolume());
   outFlowMelt.push_back(out->getMeltVolume());
-  cout << "Flows: " << out->getPrecipVolume() << ", " << out->getMeltVolume() << endl;
+  if (verbose)
+    cout << "Flows: " << out->getPrecipVolume() << ", " << out->getMeltVolume() << endl;
   
   if (!allcells.empty()) {
     ofstream cellfile;
