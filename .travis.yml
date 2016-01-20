@@ -1,4 +1,9 @@
 language: cpp
+addons:
+  apt:
+    packages:
+      - libopenmpi1.5-dev
+      - openmpi1.5-bin
 install:
  - mkdir ~/projects/
  - git clone https://github.com/jrising/openworld.git ~/projects/openworld
