@@ -1,0 +1,11 @@
+language: cpp
+addons:
+  apt:
+    packages:
+      - libopenmpi-dev
+      - openmpi-bin
+install:
+ - mkdir ~/projects/
+ - git clone https://github.com/jrising/openworld.git ~/projects/openworld
+script:
+ - make
