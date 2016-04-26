@@ -21,6 +21,9 @@ namespace openworld {
     virtual string debugInfo(unsigned rr, unsigned cc) {
       return "";
     }
+    virtual GeographicMap<double>& getVolumes() {
+      throw runtime_error("unimplemented");
+    }
 
     /* Can't scale, because volumes need to be combined...
     virtual void scaledInform(GeographicMap<double>& newMeltVolume, GeographicMap<double>& newSnowVolume, GeographicMap<double>& scaleTo) {

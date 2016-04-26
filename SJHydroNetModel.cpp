@@ -5,7 +5,7 @@
 #include <utils/Timer.h>
 #include <datastr/ConstantGeographicMap.h>
 
-SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, string allcells)
+SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor)
   : latitudes(latitudes), longitudes(longitudes), timeind(timeind), now(0, timeind) {
   precipitation = NULL;
   surfaceTemp = NULL;
@@ -19,7 +19,6 @@ SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes
 
   now = 0;
   verbose = 1;
-  this->allcells = allcells;
 
   this->meltDegreeDayFactor = meltDegreeDayFactor;
   this->meltDegreeDaySlope = meltDegreeDaySlope;
@@ -61,7 +60,7 @@ SJHydroNetModel::SJHydroNetModel(SJHydroNetModel& copy)
 
   // direct copies
   mmdayToVolume = copy.mmdayToVolume;
-  allcells = copy.allcells;
+  stepCallback = copy.stepCallback;
 
   meltDegreeDayFactor = copy.meltDegreeDayFactor;
   meltDegreeDaySlope = copy.meltDegreeDaySlope;
@@ -101,15 +100,8 @@ void SJHydroNetModel::setup(GeographicMap<double>* mask_coarse, GeographicMap<bo
   net = new HydroNet(*mask_coarse);
   out = net->generate(*direction_fine, *mask_fine, *slope_fine, mindist);
 
-  if (!allcells.empty()) {
-    ofstream cellfile;
-    cellfile.open(allcells.c_str(), ios::out);
-    for (unsigned rr = 1; rr < latitudes.count() - 1; rr++)
-      for (unsigned cc = 1; cc < longitudes.count() - 1; cc++)
-        cellfile << latitudes.getCellCenter(rr).getValue() << "\t" << longitudes.getCellCenter(cc).getValue() << "\t";
-    cellfile << endl;
-    cellfile.close();
-  }
+  if (stepCallback)
+    stepCallback->setup(*this);
 }
 
 void SJHydroNetModel::setPrecipitation(PartialConfidenceTemporalGeographicMap<double>* precipitation) {
@@ -152,7 +144,7 @@ time_t SJHydroNetModel::getTime() {
 void SJHydroNetModel::runTo(long time) {
   Measure meastime(time, timeind);
 
-  while (now < meastime) {
+  while (now == Measure(0, timeind) || now < meastime) {
     time_t now_time = now.getValue();
     struct tm* ptm = gmtime(&now_time);
 
@@ -283,20 +275,9 @@ void SJHydroNetModel::stepDay() {
   outFlowMelt.push_back(out->getMeltVolume());
   if (verbose)
     cout << "Flows: " << out->getPrecipVolume() << ", " << out->getMeltVolume() << endl;
-  
-  if (!allcells.empty()) {
-    ofstream cellfile;
-    cellfile.open(allcells.c_str(), ios::out | ios::app);
-    for (unsigned rr = 1; rr < latitudes.count() - 1; rr++)
-      for (unsigned cc = 1; cc < longitudes.count() - 1; cc++) {
-        double precipVolume, meltVolume;
-        net->sumNodeMapVolumes(rr, cc, precipVolume, meltVolume);
-      
-        cellfile << precipVolume << "\t" << meltVolume << "\t";
-      }
-    cellfile << endl;
-    cellfile.close();
-  }
+
+  if (stepCallback)
+    stepCallback->post(*this);
 }
 
 list<double> SJHydroNetModel::getOutFlowsRain() {

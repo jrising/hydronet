@@ -27,6 +27,10 @@ namespace openworld {
     virtual void inform(GeographicMap<double>& newMeltVolume, GeographicMap<double>& newSnowVolume) {
       volumes += newSnowVolume - newMeltVolume;
     }
+
+    GeographicMap<double>& getVolumes() {
+      return volumes;
+    }
   };
 }
 

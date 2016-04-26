@@ -31,6 +31,7 @@ namespace openworld {
     virtual GeographicMap<double>& operator[](Measure tt) {
       GeographicMap<double>& result = backup[tt];
 
+      /*
       int index = backuptime.inRange(tt);
       if (index >= 0 && index != lastindex) {
         cout << "SNOW COMPARE," << tt << "," << index << endl;
@@ -44,6 +45,7 @@ namespace openworld {
         
         lastindex = backuptime.inRange(tt);
       }
+      */
 
       return result;
     }

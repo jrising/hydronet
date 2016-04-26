@@ -17,6 +17,14 @@
 
 using namespace openworld;
 
+class SJHydroNetModel;
+
+class SJHydroNetModelStepCallback {
+ public:
+  virtual void setup(SJHydroNetModel& model) = 0;
+  virtual void post(SJHydroNetModel& model) = 0;
+};
+
 class SJHydroNetModel {
  protected:
   DividedRange latitudes;
@@ -35,6 +43,8 @@ class SJHydroNetModel {
   GeographicMap<double>* mmdayToVolume;
   GeographicMap<double>* mask_coarse;
 
+  SJHydroNetModelStepCallback* stepCallback;
+  
   double precipMult;
   double tempAdd;
   double snowDiff;
@@ -44,13 +54,12 @@ class SJHydroNetModel {
   GeographicMap<double>* currentGroundMeltVolume;
   GeographicMap<double>* currentGroundConf;
 
-  string allcells;
   list<double> outFlowRain;
   list<double> outFlowMelt;
   Measure now;
 
  public:
-  SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor, string allcells = "");
+  SJHydroNetModel(DividedRange latitudes, DividedRange longitudes, Indicator timeind, double meltDegreeDayFactor, double meltDegreeDaySlope, double rainRunoffCoefficient, double meltRunoffCoefficient, double groundCoefficient, double groundToBaseflowDay, double rainOnSnowCoefficient, double surfaceEvaporationFactor, double riverEvaporationFactor);
   SJHydroNetModel(SJHydroNetModel& copy);
 
   ~SJHydroNetModel();
@@ -85,6 +94,35 @@ class SJHydroNetModel {
   list<double> getOutFlowsMelt();
   unsigned getOutFlowsCount();
 
+  HydroNet& getHydroNet() {
+    return *net;
+  }
+
+  DividedRange getLatitudes() {
+    return latitudes;
+  }
+
+  DividedRange getLongitudes() {
+    return longitudes;
+  }
+
+  SnowModel& getSnowModel() {
+    return *snowModel;
+  }
+  
+  void setStepCallback(SJHydroNetModelStepCallback* stepCallback) {
+    this->stepCallback = stepCallback;
+  }
+
+  SJHydroNetModelStepCallback* getStepCallback() {
+    return stepCallback;
+  }
+
+  void resetStepCallback() {
+    if (stepCallback)
+      stepCallback->setup(*this);
+  }
+  
   // diagnostics
   list<pair<pair<pair<Measure, Measure>, pair<Measure, Measure> >, pair<bool, double> > > getAllEdges();
 

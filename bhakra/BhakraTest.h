@@ -6,6 +6,7 @@
 #include <time.h>
 #include "../SJHydroNetModel.h"
 #include "../BackupSnowModel.h"
+#include "../DummyCompareSnowModel.h"
 #include <datastr/GeographicMap.h>
 #include <datastr/DelayedTemporalGeographicMap.h>
 #include <datastr/DelayedPartialConfidenceTemporalGeographicMap.h>
@@ -17,6 +18,8 @@
 #include <measure/Measure.h>
 #include <dims/Dimensionless.h>
 #include <model/ModelTest.h>
+#include "../Callbacks.h"
+#include "BhakraModel.h"
 
 //#define USE_EVAP 1
 
@@ -100,10 +103,11 @@ class BhakraTest : public ModelTest {
           Measure attempt = it->second.randomAdjust(mydist);
           cout << "Try " << it->first << " = " << attempt.getValue() << endl;
           copy.insert(pair<string, Measure>(it->first, attempt));
-        } else if (rand() % 2 == 1)
+        } else if (rand() % 2 == 1) {
           copy.insert(pair<string, Measure>(it->first, it->second));
-        else
-          copy.insert(pair<string, Measure>(it->first, it->second.random()));	  
+	} else {
+          copy.insert(pair<string, Measure>(it->first, it->second.random()));
+	}
       }
       //}
 
@@ -112,70 +116,8 @@ class BhakraTest : public ModelTest {
 
   // Construct HydroNet, evalate to start of Snow data, and save it.
   virtual void prepare() {
-    model = new SJHydroNetModel(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),
-                                DividedRange::withEnds(74.875, 85.125, .25, Inds::lon), Inds::unixtime,
-                                3.06469, 1.0025e-05, 0.0305725, 0.0159555, 0.0104312, 0.0136191, (4.2 / 325), 0, 0);
-                                //2.81594, 0.0, 0.0331202, 0.0166743, 0.0105677, 0.0153526, 0.0, 0.0);
-
-    cout << "Setting up model" << endl;
-    GeographicMap<float>& slope = *MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                                                                        DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
-                                                                        "finalslp.tiff");
-    slope /= 1e5; // don't produce transient!
-
-    model->setup(MatrixGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),
-                                                           DividedRange::withEnds(74.875, 85.125, .25, Inds::lon),
-                                                           "mask_new.tsv", NULL, '\t'),
-                MatrixGeographicMap<bool>::loadDelimited(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                                                           DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
-                                                         "mask.tsv", NULL, '\t'),
-                new GeographicMap<double>(slope),
-                new DInfinityMap(*MatrixGeographicMap<float>::loadTIFF(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                                                                       DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
-                                                                       "finalang.tiff")), 10000.0);
-
-    cout << "Loading precipitation" << endl;
-    model->setPrecipitation(DelayedPartialConfidenceTemporalGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),
-                                                                                                DividedRange::withEnds(74.875, 85.125, .25, Inds::lon),
-                                                                                                DividedRange::withMax(DividedRange::toTime(1948, 1, 1),
-                                                                                                                      DividedRange::toTime(2011, 2, 28),
-                                                                                                                      DividedRange::toTimespan(1).getValue(), Inds::unixtime),
-                                                                                                "mergeprecip.tsv",
-                                                                                                "mergeprecip_conf.tsv", NULL, '\t'));
+    model = makeBhakraModel();
     
-    cout << "Loading temeprature" << endl;
-    model->setTemperature(DelayedPartialConfidenceTemporalGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.625, 33.875, .25, Inds::lat),
-                                                                                              DividedRange::withEnds(74.875, 85.125, .25, Inds::lon),
-                                                                                              DividedRange::withMax(DividedRange::toTime(1948, 1, 1),
-                                                                                                                    DividedRange::toTime(2011, 2, 8),
-                                                                                                                    DividedRange::toTimespan(1).getValue(), Inds::unixtime),
-                                                                                              "mergetemps.tsv",
-                                                                                              "mergetemps_conf.tsv", NULL, '\t'));
-
-    cout << "Loading snow cover" << endl;
-    BackupSnowModel* snowCover = new BackupSnowModel(DelayedTemporalGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.83333, 33.83333, .3333333, Inds::lat),
-                                                                                                         DividedRange::withEnds(74.83333, 85.16667, .3333333, Inds::lon),
-                                                                                                         DividedRange::withMax(DividedRange::toTime(1988, 1, 1),
-                                                                                                                               DividedRange::toTime(2003, 5, 1),
-                                                                                                                               DividedRange::toTimespan(365.25 / 52).getValue(), Inds::unixtime),
-                                                                                                         "snows.tsv", NULL, '\t'),
-                                                     DelayedTemporalGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.83333, 33.83333, .3333333, Inds::lat),
-                                                                                                         DividedRange::withEnds(74.83333, 85.16667, .3333333, Inds::lon),
-                                                                                                         DividedRange::withMax(DividedRange::toTime(1988, 1, 1),
-                                                                                                                               DividedRange::toTime(2003, 5, 1),
-                                                                                                                               DividedRange::toTimespan(365.25 / 52).getValue(), Inds::unixtime),
-                                                                                                         "snows.tsv", NULL, '\t'),
-                                                     DividedRange::withMax(DividedRange::toTime(1963, 1, 1),
-                                                                           DividedRange::toTime(2005, 4, 25),
-                                                                           DividedRange::toTimespan(1).getValue(), Inds::unixtime),
-                                                     .25, Measure(DividedRange::toTime(1988, 1, 15), Inds::unixtime));
-    model->setSnowModel(snowCover);
-
-    cout << "Loading elevation" << endl;
-    model->setElevation(MatrixGeographicMap<double>::loadDelimited(DividedRange::withEnds(29.74583, 33.9125, 0.008333334, Inds::lat),
-                                                                   DividedRange::withEnds(74.77084, 85.17084, 0.008333334, Inds::lon),
-                                                                   "elevation.tsv", NULL, '\t'));
-
     cout << "Loading bhakra flow" << endl;
 
     known = TimeSeries<double>::loadDelimited(DividedRange::withMax(DividedRange::toTime(1963, 1, 1),
@@ -189,21 +131,33 @@ class BhakraTest : public ModelTest {
     cout << "Initialization complete." << endl;
 
     model->setVerbosity(0);
+
     model->runTo(DividedRange::toTime(1988, 1, 1));
   }
 
+  double getVectorAt(vector<time_t> times, vector<double> values, time_t time0, time_t time1) {
+    for (unsigned ii = 0; ii < times.size(); ii++)
+      if (times[ii] >= time0 && times[ii] <= time1)
+	return values[ii];
+
+    throw runtime_error("Could not find value in getVectorAt");
+  }
+  
   virtual double evaluate() {
     cout << "Copy HydroNet" << endl;
     SJHydroNetModel* copy = new SJHydroNetModel(*model);
     cout << "Using " << copy->meltDegreeDayFactor << ", " << copy->meltDegreeDaySlope << ", " << copy->rainRunoffCoefficient << ", " << copy->meltRunoffCoefficient << ", " << copy->groundCoefficient << ", " << copy->groundToBaseflowDay << ", " << copy->rainOnSnowCoefficient << ", " << copy->surfaceEvaporationFactor << ", " << copy->riverEvaporationFactor << endl;
 
+    copy->resetStepCallback();
+    
     copy->setVerbosity(0);
 
     unsigned beforeCount = copy->getOutFlowsCount();
     copy->runTo(DividedRange::toTime(2000, 1, 1));
 
     list<double> predsRain = copy->getOutFlowsRain(), predsMelt = copy->getOutFlowsMelt();
-    Matrix<double> preds(copy->getOutFlowsCount() - beforeCount, 1);
+    Matrix<double> preds(copy->getOutFlowsCount() - beforeCount + 3, 1); // 3 more for glacier prediction
+    Matrix<double> knownSubset(copy->getOutFlowsCount() - beforeCount + 3, 1); // 3 more for glacier prediction
 
     list<double>::iterator predsRainIt, predsMeltIt;
     unsigned ii;
@@ -212,10 +166,33 @@ class BhakraTest : public ModelTest {
       if (ii < beforeCount)
 	continue;
       preds.get(ii - beforeCount, 0) = *predsRainIt + *predsMeltIt;
+      knownSubset.get(ii - beforeCount, 0) = known->get(ii, 0);
       cout << known->get(ii, 0) << "\t" << *predsRainIt << "\t" << *predsMeltIt << endl;
     }
+    
+    // Add predictions of volume, relative to 1988
+    double mm2m3 = 2641759225. / 1000; // m^2 * m / mm
 
-    Matrix<double>& knownSubset = known->subset(beforeCount, 0, preds.getRows(), 1);
+    SJHydroNetModelStoreSingleVolume* callback = (SJHydroNetModelStoreSingleVolume*) copy->getStepCallback();
+    double p1988 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1988, 7, 1), DividedRange::toTime(1988, 7, 2));
+    double p1989 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1989, 7, 1), DividedRange::toTime(1989, 7, 2));
+    double p1990 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1990, 7, 1), DividedRange::toTime(1990, 7, 2));
+    double p1991 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1991, 7, 1), DividedRange::toTime(1991, 7, 2));
+    preds.get(copy->getOutFlowsCount() - beforeCount, 0) = (p1989 - p1988) / sqrt(365.);
+    preds.get(copy->getOutFlowsCount() - beforeCount + 1, 0) = (p1990 - p1989) / sqrt(365.);
+    preds.get(copy->getOutFlowsCount() - beforeCount + 2, 0) = (p1991 - p1990) / sqrt(365.);
+
+    double v1988 = -2100;
+    double v1989 = -1760;
+    double v1990 = -2030;
+    double v1991 = -2850;
+    knownSubset.get(copy->getOutFlowsCount() - beforeCount, 0) = (v1989 - v1988) * mm2m3 / sqrt(365.);
+    knownSubset.get(copy->getOutFlowsCount() - beforeCount + 1, 0) = (v1990 - v1989) * mm2m3 / sqrt(365.);
+    knownSubset.get(copy->getOutFlowsCount() - beforeCount + 2, 0) = (v1991 - v1990) * mm2m3 / sqrt(365.);
+
+    cout << "Glacier comparison: " << p1989 - p1988 << ", " << p1990 - p1989 << ", " << p1991 - p1990 << " =?= " <<
+      (v1989 - v1988) * mm2m3 << ", " << (v1990 - v1989) * mm2m3 << ", " << (v1991 - v1990) * mm2m3 << endl;
+    
     cout << "Lengths: " << knownSubset.getRows() << " vs. " << preds.getRows() << endl;
     double rsqr = OLS::calcRSqr(knownSubset, preds);
     cout << "RSqr: " << rsqr << endl;
