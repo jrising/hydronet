@@ -3,10 +3,11 @@ SYS = Linux
 CC = mpic++
 DEBUG = -g
 OWD = ~/projects/openworld
-CFLAGS = -Wall -c $(DEBUG) -I $(OWD)
+ODS = ~/projects/opendims
+CFLAGS = -Wall -c $(DEBUG) -I $(OWD) -I $(ODS)
 LFLAGS = -Wall $(DEBUG)
 
-OBJS_MAIN = $(OWD)/geotiff/tiffIO.o $(OWD)/geotiff/commonLib.o $(OWD)/datastr/GeographicMap.o $(OWD)/memory/Transients.o $(OWD)/dims/Dims.o $(OWD)/dims/Dimensions.o $(OWD)/dims/Dimensionless.o $(OWD)/measure/Units.o $(OWD)/measure/Inds.o $(OWD)/dims/GlobalDimensions.o
+OBJS_MAIN = $(OWD)/geotiff/tiffIO.o $(OWD)/geotiff/commonLib.o $(OWD)/datastr/GeographicMap.o $(OWD)/memory/Transients.o $(ODS)/dims/Dims.o $(ODS)/dims/Dimensions.o $(ODS)/dims/Dimensionless.o $(ODS)/measure/Units.o $(ODS)/measure/Inds.o $(ODS)/dims/GlobalDimensions.o
 
 all: $(OBJS_MAIN) basinmask.o
 	$(CC) $(LFLAGS) basinmask.o $(OBJS_MAIN) -o basinmask

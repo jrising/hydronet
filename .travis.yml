@@ -8,4 +8,6 @@ install:
  - mkdir ~/projects/
  - git clone https://github.com/jrising/openworld.git ~/projects/openworld
 script:
+ - git clone https://github.com/jrising/opendims.git ~/projects/opendims
+script:
  - make
