@@ -293,8 +293,8 @@ namespace openworld {
 
   class HydroSurfaceNode : public HydroNode {
   private:
-    static const double minSurfaceToFlow = .1;
-    static const double maxSurfaceVelocity = 1;
+    static const double minSurfaceToFlow;
+    static const double maxSurfaceVelocity;
 
   public:
     HydroSurfaceNode(double nodeArea, double distAlong, double distAcross, double slope, Measure latitude, Measure longitude)
@@ -329,8 +329,8 @@ namespace openworld {
 
   class HydroRiverNode : public HydroNode  {
   private:
-    static const double minRiverToFlow = .001;
-    static const double maxRiverVelocity = 4;
+    static const double minRiverToFlow;
+    static const double maxRiverVelocity;
 
   public:
     HydroRiverNode(double nodeArea, double distAlong, double distAcross, double slope, Measure latitude, Measure longitude)

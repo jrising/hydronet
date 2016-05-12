@@ -1,6 +1,11 @@
 #include "HydroNet.h"
 
 namespace openworld {
+  const double HydroSurfaceNode::minSurfaceToFlow = .1;
+  const double HydroSurfaceNode::maxSurfaceVelocity = 1;
+  const double HydroRiverNode::minRiverToFlow = .001;
+  const double HydroRiverNode::maxRiverVelocity = 4;
+
   void* nodeListConstructor(istream& in, PointerReference& reference) {
     unsigned count;
     in >> count;

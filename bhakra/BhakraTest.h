@@ -157,7 +157,7 @@ class BhakraTest : public ModelTest {
       glacierMeltRunoffHeight(Inds::unixtime), glacierRainGroundHeight(Inds::unixtime), glacierMeltGroundHeight(Inds::unixtime), glacierDirectHeightConf(Inds::unixtime);
 
     SJHydroNetModel::runToHeight(*glacierPrecips, *glacierTemps, *glacierCover, *glacierElevation,
-                                 copy->meltDegreeDayFactor, copy->meltDegreeDaySlope
+                                 copy->meltDegreeDayFactor, copy->meltDegreeDaySlope,
                                  copy->rainRunoffCoefficient, copy->meltRunoffCoefficient,
                                  copy->groundCoefficient, copy->rainOnSnowCoefficient,
                                  glacierSnowMeltHeight,  glacierSnowAccumHeight, glacierRainRunoffHeight,
