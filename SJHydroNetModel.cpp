@@ -114,7 +114,7 @@ void SJHydroNetModel::setTemperature(PartialConfidenceTemporalGeographicMap<doub
 
 void SJHydroNetModel::setSnowModel(SnowModel* snowModel) {
   this->snowModel = snowModel;
-  
+
 }
 
 void SJHydroNetModel::setElevation(GeographicMap<double>* elevation) {
@@ -189,43 +189,29 @@ void SJHydroNetModel::stepDay() {
     for (int cc = 0; cc < 32; cc++)
     cout << rr << ", " << cc << ": " << snowModel->debugInfo(rr, cc) << endl;*/
 
-  // Add precipitation
-  if (verbose)
-    cout << "Determining valid inputs" << endl;
-  GeographicMap<bool>& validPrecipitation = scaledPrecipitation >= 0.0;
-  GeographicMap<bool>& validSurfaceTemp = scaledSurfaceTemp >= 100.0;
-  GeographicMap<bool>& validSnowCover = scaledSnowCover >= 0.0;
-  GeographicMap<bool>& aboveZeroCelsius = scaledSurfaceTemp >= ZERO_CELSIUS;
-
-  if (verbose)
-    cout << "Adding surface flow" << endl;
-  // rain-related calculations
-  GeographicMap<double>& rainPortion = ((scaledSurfaceTemp - SNOW_ALL_TEMPERATURE) / (RAIN_ALL_TEMPERATURE - SNOW_ALL_TEMPERATURE)) * (scaledSurfaceTemp > SNOW_ALL_TEMPERATURE) * (scaledSurfaceTemp <= RAIN_ALL_TEMPERATURE) + (scaledSurfaceTemp > RAIN_ALL_TEMPERATURE);
-  GeographicMap<double>& newRainAllVolume = rainPortion * scaledPrecipitation * *mmdayToVolume * (validPrecipitation * validSurfaceTemp);
-  GeographicMap<double>& newSnowfreeRainVolume = newRainAllVolume * (1.0 - fracSnowCover) * validSnowCover;
-  //GeographicMap<double>& newSnowVolume = (1 - rainPortion) * scaledPrecipitation * mmdayToVolume * (validPrecipitation * validSurfaceTemp);
-
-  // snow-related calculations
-  GeographicMap<double>& newRainOnSnowRainVolume = newRainAllVolume * fracSnowCover * validSnowCover; // uses melt runoff, because rain on snow like melt
-  GeographicMap<double>& newRainOnSnowMeltVolume = rainOnSnowCoefficient * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * newRainOnSnowRainVolume;
   GeographicMap<double>& fullMeltDegreeDayFactor = (meltDegreeDayFactor + meltDegreeDaySlope * *elevation);
-  //GeographicMap<double>& validMeltDegreeDayFactor = fullMeltDegreeDayFactor * (fullMeltDegreeDayFactor > 0);
-  GeographicMap<double>& newDegreeDayMeltVolume = fullMeltDegreeDayFactor * fracSnowCover * *mmdayToVolume * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * validSnowCover;
 
-  //cout << "A: 1, 29: " << scaledPrecipitation.getCellConst(1, 29) << ", " << scaledSurfaceTemp.getCellConst(1, 29) << ", " << newDegreeDayMeltVolume.getCellConst(1, 29) << ", " << newRainOnSnowMeltVolume.getCellConst(1, 29) << ", 1-" << rainPortion.getCellConst(1, 29) << " * " << scaledPrecipitation.getCellConst(1, 29) << " * " << mmdayToVolume->getCellConst(1, 29) << " * " << (validPrecipitation.getCellConst(1, 29) * validSurfaceTemp.getCellConst(1, 29)) << " = " << (1.0 - rainPortion.getCellConst(1, 29)) * scaledPrecipitation.getCellConst(1, 29) * mmdayToVolume->getCellConst(1, 29) * (validPrecipitation.getCellConst(1, 29) * validSurfaceTemp.getCellConst(1, 29)) << endl;
+  GeographicMap<double> *newSnowMeltHeightPtr, *newSnowAccumHeightPtr,
+    *newRainRunoffHeightPtr, *newMeltRunoffHeightPtr,
+    *newRainGroundHeightPtr, *newMeltGroundHeightPtr,
+    *newDirectHeightConfPtr;
+  stepDayHeight<GeographicMap<double>, GeographicMap<bool> >(scaledPrecipitation, scaledSurfaceTemp,
+                                                             fracSnowCover, fullMeltDegreeDayFactor,
+                                                             rainRunoffCoefficient, meltRunoffCoefficient,
+                                                             groundCoefficient, rainOnSnowCoefficient,
+                                                             newSnowMeltHeightPtr, newSnowAccumHeightPtr,
+                                                             newRainRunoffHeightPtr, newMeltRunoffHeightPtr,
+                                                             newRainGroundHeightPtr, newMeltGroundHeightPtr,
+                                                             newDirectHeightConfPtr, verbose);
+  GeographicMap<double>& newSnowMeltVolume = *newSnowMeltHeightPtr * *mmdayToVolume;
+  GeographicMap<double>& newSnowAccumVolume = *newSnowAccumHeightPtr * *mmdayToVolume;
+  GeographicMap<double>& newRainRunoffVolume = *newRainRunoffHeightPtr * *mmdayToVolume;
+  GeographicMap<double>& newMeltRunoffVolume = *newMeltRunoffHeightPtr * *mmdayToVolume;
+  GeographicMap<double>& newRainGroundVolume = *newRainGroundHeightPtr * *mmdayToVolume;
+  GeographicMap<double>& newMeltGroundVolume = *newMeltGroundHeightPtr * *mmdayToVolume;
+  GeographicMap<double>& newDirectVolumeConf = *newDirectHeightConfPtr * *mmdayToVolume;
 
-  GeographicMap<double>& newSnowMeltVolume = newDegreeDayMeltVolume + newRainOnSnowMeltVolume;
-  GeographicMap<double>& newSnowAccumVolume = (1.0 - rainPortion) * scaledPrecipitation * *mmdayToVolume * (validPrecipitation * validSurfaceTemp);
   snowModel->inform(newSnowMeltVolume, newSnowAccumVolume);
-
-  // final rain-related and melt-related volumes
-  GeographicMap<double>& newRainRunoffVolume = rainRunoffCoefficient * newSnowfreeRainVolume + meltRunoffCoefficient * newRainOnSnowRainVolume;
-  GeographicMap<double>& newMeltRunoffVolume = meltRunoffCoefficient * newSnowMeltVolume;
-
-  GeographicMap<double>& newRainGroundVolume = groundCoefficient * ((1 - rainRunoffCoefficient) * newSnowfreeRainVolume + (1 - meltRunoffCoefficient) * newRainOnSnowRainVolume);
-  GeographicMap<double>& newMeltGroundVolume = groundCoefficient * (1 - meltRunoffCoefficient) * newSnowMeltVolume; // CHANGE from paper: don't use M, which is multiplied by melt coefficient
-
-  GeographicMap<double>& newDirectVolumeConf = *(tew_(GeographicMap<double>(validPrecipitation * validSurfaceTemp * validSnowCover)));
 
   // Extract baseflow
   GeographicMap<double>& newBaseflowRainVolume = *currentGroundRainVolume * groundToBaseflowDay;
@@ -244,7 +230,7 @@ void SJHydroNetModel::stepDay() {
 
   time_t now_time = now.getValue();
   struct tm* ptm = gmtime(&now_time);
-  
+
   double fracyear = ptm->tm_yday / 365.0;
 
   if (verbose)
@@ -278,6 +264,112 @@ void SJHydroNetModel::stepDay() {
 
   if (stepCallback)
     stepCallback->post(*this);
+}
+
+template <class TTemporal, class TNumeric>
+void SJHydroNetModel::runToHeight(TTemporal& precipitation, TTemporal& surfaceTemp,
+                                  TTemporal& fracSnowCover, TNumeric& elevation,
+                                  double meltDegreeDayFactor, double meltDegreeDaySlope,
+                                  double rainRunoffCoefficient, double meltRunoffCoefficient,
+                                  double groundCoefficient, double rainOnSnowCoefficient,
+                                  TTemporal& newSnowMeltHeight, TTemporal& newSnowAccumHeight,
+                                  TTemporal& newRainRunoffHeight, TTemporal& newMeltRunoffHeight,
+                                  TTemporal& newRainGroundHeight, TTemporal& newMeltGroundHeight,
+                                  TTemporal& newDirectHeightConf,
+                                  Measure now, Measure endtime, bool verbose) {
+  TNumeric& fullMeltDegreeDayFactor = (meltDegreeDayFactor + meltDegreeDaySlope * elevation);
+
+  while (now.getValue() == 0 || now < endtime) {
+    time_t now_time = now.getValue();
+    struct tm* ptm = gmtime(&now_time);
+
+    if (now.getValue() == 0) {
+      // What is the earliest time we can handle?
+      cout << "Start time: " << precipitation->getTimes().getMin() << ", " << surfaceTemp->getTimes().getMin() << ", " << fracSnowCover->getTimes().getMin() << endl;
+      now = max(max(precipitation->getTimes().getMin(), surfaceTemp->getTimes().getMin()), fracSnowCover->getTimes().getMin());
+      cout << "Starting at " << now << endl;
+    } else {
+      cout << ptm->tm_mday << "/" << ptm->tm_mon+1 << "/" << ptm->tm_year << ": " << now << " < " << endtime << endl;
+
+      if (now.getIndicator() == Inds::unixtime)
+        now += DividedRange::toTimespan(1);
+      else
+        now += 1/360.0;
+    }
+
+    TNumeric& nowPrecipitation = precipitation[now];
+    TNumeric& nowSurfaceTemp = surfaceTemp[now];
+    TNumeric& nowFracSnowCover = fracSnowCover[now];
+
+    TNumeric *newSnowMeltHeightPtr, *newSnowAccumHeightPtr,
+      *newRainRunoffHeightPtr, *newMeltRunoffHeightPtr,
+      *newRainGroundHeightPtr, *newMeltGroundHeightPtr,
+      *newDirectHeightConfPtr;
+    stepDayHeight(nowPrecipitation, nowSurfaceTemp, nowFracSnowCover, fullMeltDegreeDayFactor,
+                  rainRunoffCoefficient, meltRunoffCoefficient, groundCoefficient, rainOnSnowCoefficient,
+                  newSnowMeltHeightPtr, newSnowAccumHeightPtr, newRainRunoffHeightPtr,
+                  newMeltRunoffHeightPtr, newRainGroundHeightPtr, newMeltGroundHeightPtr,
+                  newDirectHeightConfPtr);
+
+    newSnowMeltHeight.add(*newSnowMeltHeightPtr);
+    newSnowAccumHeight.add(*newSnowAccumHeightPtr);
+    newRainRunoffHeight.add(*newRainRunoffHeightPtr);
+    newMeltRunoffHeight.add(*newMeltRunoffHeightPtr);
+    newRainGroundHeight.add(*newRainGroundHeightPtr);
+    newMeltGroundHeight.add(*newMeltGroundHeightPtr);
+    newDirectHeightConf.add(*newDirectHeightConfPtr);
+  }
+}
+
+template <class TNumeric, class TLogical>
+void SJHydroNetModel::stepDayHeight(TNumeric& scaledPrecipitation, TNumeric& scaledSurfaceTemp,
+                                    TNumeric& fracSnowCover, TNumeric& fullMeltDegreeDayFactor,
+                                    double rainRunoffCoefficient, double meltRunoffCoefficient,
+                                    double groundCoefficient, double rainOnSnowCoefficient,
+                                    TNumeric*& newSnowMeltHeightPtr, TNumeric*& newSnowAccumHeightPtr,
+                                    TNumeric*& newRainRunoffHeightPtr, TNumeric*& newMeltRunoffHeightPtr,
+                                    TNumeric*& newRainGroundHeightPtr, TNumeric*& newMeltGroundHeightPtr,
+                                    TNumeric*& newDirectHeightConfPtr, bool verbose) {
+  // Add precipitation
+  if (verbose)
+    cout << "Determining valid inputs" << endl;
+  TLogical& validPrecipitation = scaledPrecipitation >= 0.0;
+  TLogical& validSurfaceTemp = scaledSurfaceTemp >= 100.0;
+  TLogical& validSnowCover = fracSnowCover >= 0.0;
+  TLogical& aboveZeroCelsius = scaledSurfaceTemp >= ZERO_CELSIUS;
+
+  if (verbose)
+    cout << "Adding surface flow" << endl;
+  // rain-related calculations
+  TNumeric& rainPortion = ((scaledSurfaceTemp - SNOW_ALL_TEMPERATURE) / (RAIN_ALL_TEMPERATURE - SNOW_ALL_TEMPERATURE)) * (scaledSurfaceTemp > SNOW_ALL_TEMPERATURE) * (scaledSurfaceTemp <= RAIN_ALL_TEMPERATURE) + (scaledSurfaceTemp > RAIN_ALL_TEMPERATURE);
+  TNumeric& newRainAllHeight = rainPortion * scaledPrecipitation * (validPrecipitation * validSurfaceTemp);
+  TNumeric& newSnowfreeRainHeight = newRainAllHeight * (1.0 - fracSnowCover) * validSnowCover;
+
+  // snow-related calculations
+  TNumeric& newRainOnSnowRainHeight = newRainAllHeight * fracSnowCover * validSnowCover; // uses melt runoff, because rain on snow like melt
+  TNumeric& newRainOnSnowMeltHeight = rainOnSnowCoefficient * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * newRainOnSnowRainHeight;
+  //TNumeric& validMeltDegreeDayFactor = fullMeltDegreeDayFactor * (fullMeltDegreeDayFactor > 0);
+  TNumeric& newDegreeDayMeltHeight = fullMeltDegreeDayFactor * fracSnowCover * (scaledSurfaceTemp - ZERO_CELSIUS) * aboveZeroCelsius * validSnowCover;
+
+  TNumeric& newSnowMeltHeight = newDegreeDayMeltHeight + newRainOnSnowMeltHeight;
+  TNumeric& newSnowAccumHeight = (1.0 - rainPortion) * scaledPrecipitation * (validPrecipitation * validSurfaceTemp);
+
+  // final rain-related and melt-related heights
+  TNumeric& newRainRunoffHeight = rainRunoffCoefficient * newSnowfreeRainHeight + meltRunoffCoefficient * newRainOnSnowRainHeight;
+  TNumeric& newMeltRunoffHeight = meltRunoffCoefficient * newSnowMeltHeight;
+
+  TNumeric& newRainGroundHeight = groundCoefficient * ((1 - rainRunoffCoefficient) * newSnowfreeRainHeight + (1 - meltRunoffCoefficient) * newRainOnSnowRainHeight);
+  TNumeric& newMeltGroundHeight = groundCoefficient * (1 - meltRunoffCoefficient) * newSnowMeltHeight; // CHANGE from paper: don't use M, which is multiplied by melt coefficient
+
+  TNumeric& newDirectHeightConf = *(tew_(TNumeric(validPrecipitation * validSurfaceTemp * validSnowCover)));
+
+  newSnowMeltHeightPtr = &newSnowMeltHeight;
+  newSnowAccumHeightPtr = &newSnowAccumHeight;
+  newRainRunoffHeightPtr = &newRainRunoffHeight;
+  newMeltRunoffHeightPtr = &newMeltRunoffHeight;
+  newRainGroundHeightPtr = &newRainGroundHeight;
+  newMeltGroundHeightPtr = &newMeltGroundHeight;
+  newDirectHeightConfPtr = &newDirectHeightConf;
 }
 
 list<double> SJHydroNetModel::getOutFlowsRain() {

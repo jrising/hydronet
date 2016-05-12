@@ -31,7 +31,7 @@ class SJHydroNetModel {
   DividedRange longitudes;
   Indicator timeind;
   int verbose;
-  
+
   // Inputs
   HydroNet* net;
   HydroOutputNode* out;
@@ -44,7 +44,7 @@ class SJHydroNetModel {
   GeographicMap<double>* mask_coarse;
 
   SJHydroNetModelStepCallback* stepCallback;
-  
+
   double precipMult;
   double tempAdd;
   double snowDiff;
@@ -85,10 +85,32 @@ class SJHydroNetModel {
   void setTemperatureAddition(double tempAdd = 0);
   void setSnowCoverDifference(double snowDiff = 0);
   void setVerbosity(int verbose);
-  
+
   time_t getTime();
   void runTo(time_t time);
   void stepDay();
+
+  template <class TNumeric, class TLogical>
+    static void stepDayHeight(TNumeric& scaledPrecipitation, TNumeric& scaledSurfaceTemp,
+                              TNumeric& fracSnowCover, TNumeric& fullMeltDegreeDayFactor,
+                              double rainRunoffCoefficient, double meltRunoffCoefficient,
+                              double groundCoefficient, double rainOnSnowCoefficient,
+                              TNumeric*& newSnowMeltHeightPtr, TNumeric*& newSnowAccumHeightPtr,
+                              TNumeric*& newRainRunoffHeightPtr, TNumeric*& newMeltRunoffHeightPtr,
+                              TNumeric*& newRainGroundHeightPtr, TNumeric*& newMeltGroundHeightPtr,
+                              TNumeric*& newDirectHeightConfPtr, bool verbose);
+
+  template <class TTemporal, class TNumeric>
+    static void runToHeight(TTemporal& precipitation, TTemporal& surfaceTemp,
+                            TTemporal& fracSnowCover, TNumeric& elevation,
+                            double meltDegreeDayFactor, double meltDegreeDaySlope,
+                            double rainRunoffCoefficient, double meltRunoffCoefficient,
+                            double groundCoefficient, double rainOnSnowCoefficient,
+                            TTemporal& newSnowMeltHeight, TTemporal& newSnowAccumHeight,
+                            TTemporal& newRainRunoffHeight, TTemporal& newMeltRunoffHeight,
+                            TTemporal& newRainGroundHeight, TTemporal& newMeltGroundHeight,
+                            TTemporal& newDirectHeightConf,
+                            Measure now, Measure endtime, bool verbose);
 
   list<double> getOutFlowsRain();
   list<double> getOutFlowsMelt();
@@ -106,10 +128,22 @@ class SJHydroNetModel {
     return longitudes;
   }
 
+  PartialConfidenceTemporalGeographicMap<double>& getPrecipitation() {
+    return *precipitation;
+  }
+
+  PartialConfidenceTemporalGeographicMap<double>& getTemperature() {
+    return *surfaceTemp;
+  }
+
   SnowModel& getSnowModel() {
     return *snowModel;
   }
-  
+
+  GeographicMap<double>& getElevation() {
+    return *elevation;
+  }
+
   void setStepCallback(SJHydroNetModelStepCallback* stepCallback) {
     this->stepCallback = stepCallback;
   }
@@ -122,7 +156,7 @@ class SJHydroNetModel {
     if (stepCallback)
       stepCallback->setup(*this);
   }
-  
+
   // diagnostics
   list<pair<pair<pair<Measure, Measure>, pair<Measure, Measure> >, pair<bool, double> > > getAllEdges();
 
@@ -165,7 +199,7 @@ class SJHydroNetModel {
   }
   //  friend istream& operator>>(istream& in, const SJHydroNetModel& sink);
   //  friend ostream& operator<<(ostream& os, const SJHydroNetModel& source);
-  
+
  protected:
   GeographicMap<double>& weightedFraction(GeographicMap<double>& weights1, GeographicMap<double>& values1, GeographicMap<double>& weights2, GeographicMap<double>& values2);
 };

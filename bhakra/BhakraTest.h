@@ -11,6 +11,7 @@
 #include <datastr/DelayedTemporalGeographicMap.h>
 #include <datastr/DelayedPartialConfidenceTemporalGeographicMap.h>
 #include <datastr/TimeSeries.h>
+#include <datastr/AbstractCollection.h>
 #include <datastr/DividedRange.h>
 #include <datastr/FileFormats.h>
 #include <metrics/OLS.h>
@@ -18,7 +19,6 @@
 #include <measure/Measure.h>
 #include <dims/Dimensionless.h>
 #include <model/ModelTest.h>
-#include "../Callbacks.h"
 #include "BhakraModel.h"
 
 //#define USE_EVAP 1
@@ -83,7 +83,7 @@ class BhakraTest : public ModelTest {
     }
 #endif
 
-    /*if (count == 0) {
+    if (count == 0) {
       copy.insert(pair<string, Measure>("meltDegreeDayFactor", params.find("meltDegreeDayFactor")->second.random()));
       copy.insert(pair<string, Measure>("meltDegreeDaySlope", params.find("meltDegreeDaySlope")->second.random()));
       copy.insert(pair<string, Measure>("rainRunoffCoefficient", params.find("rainRunoffCoefficient")->second.random()));
@@ -91,7 +91,7 @@ class BhakraTest : public ModelTest {
       copy.insert(pair<string, Measure>("groundToBaseflowDay", params.find("groundToBaseflowDay")->second.random()));
       copy.insert(pair<string, Measure>("rainOnSnowCoefficient", params.find("rainOnSnowCoefficient")->second.random()));
       copy.insert(pair<string, Measure>("groundCoefficient", params.find("groundCoefficient")->second.random()));
-      } else {*/
+    } else {
       // Modify the parameters
       for (map<string, Measure>::iterator it = params.begin(); it != params.end(); it++) {
         if (rand() % 2 == 1) {
@@ -105,11 +105,11 @@ class BhakraTest : public ModelTest {
           copy.insert(pair<string, Measure>(it->first, attempt));
         } else if (rand() % 2 == 1) {
           copy.insert(pair<string, Measure>(it->first, it->second));
-	} else {
+        } else {
           copy.insert(pair<string, Measure>(it->first, it->second.random()));
-	}
+        }
       }
-      //}
+    }
 
     return copy;
   }
@@ -117,7 +117,7 @@ class BhakraTest : public ModelTest {
   // Construct HydroNet, evalate to start of Snow data, and save it.
   virtual void prepare() {
     model = makeBhakraModel();
-    
+
     cout << "Loading bhakra flow" << endl;
 
     known = TimeSeries<double>::loadDelimited(DividedRange::withMax(DividedRange::toTime(1963, 1, 1),
@@ -135,22 +135,54 @@ class BhakraTest : public ModelTest {
     model->runTo(DividedRange::toTime(1988, 1, 1));
   }
 
-  double getVectorAt(vector<time_t> times, vector<double> values, time_t time0, time_t time1) {
-    for (unsigned ii = 0; ii < times.size(); ii++)
-      if (times[ii] >= time0 && times[ii] <= time1)
-	return values[ii];
-
-    throw runtime_error("Could not find value in getVectorAt");
-  }
-  
   virtual double evaluate() {
     cout << "Copy HydroNet" << endl;
     SJHydroNetModel* copy = new SJHydroNetModel(*model);
     cout << "Using " << copy->meltDegreeDayFactor << ", " << copy->meltDegreeDaySlope << ", " << copy->rainRunoffCoefficient << ", " << copy->meltRunoffCoefficient << ", " << copy->groundCoefficient << ", " << copy->groundToBaseflowDay << ", " << copy->rainOnSnowCoefficient << ", " << copy->surfaceEvaporationFactor << ", " << copy->riverEvaporationFactor << endl;
 
-    copy->resetStepCallback();
-    
     copy->setVerbosity(0);
+
+    // Evaluate the glacier points
+    double glalats[] = {31.28, 31.4, 31.37, 30.45};
+    double glalons[] = {78.33, 78.5, 78.49, 81.333};
+    double glasnow[] = {1., 1., 1., 1.};
+    MultiMeasure glacierLatitudes(4, glalats, Inds::lat);
+    MultiMeasure glacierLongitudes(4, glalons, Inds::lon);
+    TemporalAbstractCollection<double>* glacierPrecips = TemporalAbstractCollection<double>::loadMapPoints(copy->getPrecipitation(), glacierLatitudes, glacierLongitudes);
+    TemporalAbstractCollection<double>* glacierTemps = TemporalAbstractCollection<double>::loadDelimitedPoints(copy->getTemperature().getTimes(), "glaciertemps.csv");
+    TemporalAbstractCollection<double>* glacierCover = TemporalAbstractCollection<double>::loadConstantPoints(copy->getSnowModel().getTimes(), glasnow, 4);
+    AbstractCollection<double>* glacierElevation = AbstractCollection<double>::loadMapPoints(copy->getElevation(), glacierLatitudes, glacierLongitudes);
+
+    TemporalAbstractCollection<double> glacierSnowMeltHeight(Inds::unixtime), glacierSnowAccumHeight(Inds::unixtime), glacierRainRunoffHeight(Inds::unixtime),
+      glacierMeltRunoffHeight(Inds::unixtime), glacierRainGroundHeight(Inds::unixtime), glacierMeltGroundHeight(Inds::unixtime), glacierDirectHeightConf(Inds::unixtime);
+
+    SJHydroNetModel::runToHeight(*glacierPrecips, *glacierTemps, *glacierCover, *glacierElevation,
+                                 copy->meltDegreeDayFactor, copy->meltDegreeDaySlope
+                                 copy->rainRunoffCoefficient, copy->meltRunoffCoefficient,
+                                 copy->groundCoefficient, copy->rainOnSnowCoefficient,
+                                 glacierSnowMeltHeight,  glacierSnowAccumHeight, glacierRainRunoffHeight,
+                                 glacierMeltRunoffHeight, glacierRainGroundHeight, glacierMeltGroundHeight,
+                                 glacierDirectHeightConf, Measure(0, Inds::unixtime),
+                                 Measure(DividedRange::toTime(2000, 1, 1), Inds::unixtime), true);
+
+    // Accumulate vectors
+    TemporalAbstractCollection<double>& snowHeight = (glacierSnowAccumHeight - glacierSnowMeltHeight).cumsum();
+
+    // Compare glacier points
+    double p1988 = snowHeight.getSingle(0).get(Measure(DividedRange::toTime(1988, 7, 1), Inds::unixtime));
+    double p1989 = snowHeight.getSingle(0).get(Measure(DividedRange::toTime(1989, 7, 1), Inds::unixtime));
+    double p1990 = snowHeight.getSingle(0).get(Measure(DividedRange::toTime(1990, 7, 1), Inds::unixtime));
+    double p1991 = snowHeight.getSingle(0).get(Measure(DividedRange::toTime(1991, 7, 1), Inds::unixtime));
+
+    double v1988 = -2100;
+    double v1989 = -1760;
+    double v1990 = -2030;
+    double v1991 = -2850;
+
+    cout << "Glacier comparison: " << p1989 - p1988 << ", " << p1990 - p1989 << ", " << p1991 - p1990 <<
+      " =?= " << v1989 - v1988 << ", " << v1990 - v1989 << ", " << v1991 - v1990 << endl;
+
+    // Evaluate the gridded model
 
     unsigned beforeCount = copy->getOutFlowsCount();
     copy->runTo(DividedRange::toTime(2000, 1, 1));
@@ -164,35 +196,23 @@ class BhakraTest : public ModelTest {
     for (predsRainIt = predsRain.begin(), predsMeltIt = predsMelt.begin(), ii = 0;
          predsRainIt != predsRain.end() && predsMeltIt != predsMelt.end(); predsRainIt++, predsMeltIt++, ii++) {
       if (ii < beforeCount)
-	continue;
+        continue;
       preds.get(ii - beforeCount, 0) = *predsRainIt + *predsMeltIt;
-      knownSubset.get(ii - beforeCount, 0) = known->get(ii, 0);
-      cout << known->get(ii, 0) << "\t" << *predsRainIt << "\t" << *predsMeltIt << endl;
+      knownSubset.get(ii - beforeCount, 0) = known->get(ii);
+      cout << known->get(ii) << "\t" << *predsRainIt << "\t" << *predsMeltIt << endl;
     }
-    
+
     // Add predictions of volume, relative to 1988
     double mm2m3 = 2641759225. / 1000; // m^2 * m / mm
 
-    SJHydroNetModelStoreSingleVolume* callback = (SJHydroNetModelStoreSingleVolume*) copy->getStepCallback();
-    double p1988 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1988, 7, 1), DividedRange::toTime(1988, 7, 2));
-    double p1989 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1989, 7, 1), DividedRange::toTime(1989, 7, 2));
-    double p1990 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1990, 7, 1), DividedRange::toTime(1990, 7, 2));
-    double p1991 = getVectorAt(callback->getTimes(), callback->getVolumes(), DividedRange::toTime(1991, 7, 1), DividedRange::toTime(1991, 7, 2));
-    preds.get(copy->getOutFlowsCount() - beforeCount, 0) = (p1989 - p1988) / sqrt(365.);
-    preds.get(copy->getOutFlowsCount() - beforeCount + 1, 0) = (p1990 - p1989) / sqrt(365.);
-    preds.get(copy->getOutFlowsCount() - beforeCount + 2, 0) = (p1991 - p1990) / sqrt(365.);
+    preds.get(copy->getOutFlowsCount() - beforeCount, 0) = (p1989 - p1988) * mm2m3 / sqrt(365.);
+    preds.get(copy->getOutFlowsCount() - beforeCount + 1, 0) = (p1990 - p1989) * mm2m3 / sqrt(365.);
+    preds.get(copy->getOutFlowsCount() - beforeCount + 2, 0) = (p1991 - p1990) * mm2m3 / sqrt(365.);
 
-    double v1988 = -2100;
-    double v1989 = -1760;
-    double v1990 = -2030;
-    double v1991 = -2850;
     knownSubset.get(copy->getOutFlowsCount() - beforeCount, 0) = (v1989 - v1988) * mm2m3 / sqrt(365.);
     knownSubset.get(copy->getOutFlowsCount() - beforeCount + 1, 0) = (v1990 - v1989) * mm2m3 / sqrt(365.);
     knownSubset.get(copy->getOutFlowsCount() - beforeCount + 2, 0) = (v1991 - v1990) * mm2m3 / sqrt(365.);
 
-    cout << "Glacier comparison: " << p1989 - p1988 << ", " << p1990 - p1989 << ", " << p1991 - p1990 << " =?= " <<
-      (v1989 - v1988) * mm2m3 << ", " << (v1990 - v1989) * mm2m3 << ", " << (v1991 - v1990) * mm2m3 << endl;
-    
     cout << "Lengths: " << knownSubset.getRows() << " vs. " << preds.getRows() << endl;
     double rsqr = OLS::calcRSqr(knownSubset, preds);
     cout << "RSqr: " << rsqr << endl;
@@ -259,9 +279,9 @@ class BhakraTest : public ModelTest {
       if (ii < beforeCount)
         continue;
       preds.get(ii - beforeCount, 0) = *predsRainIt + *predsMeltIt;
-      cout << known->get(ii, 0) << "\t" << *predsRainIt << "\t" << *predsMeltIt << endl;
+      cout << known->get(ii) << "\t" << *predsRainIt << "\t" << *predsMeltIt << endl;
     }
-    
+
     Matrix<double>& knownSubset = known->subset(beforeCount, 0, preds.getRows(), 1);
     double rsqr = OLS::calcRSqr(knownSubset, preds);
     cout << "RSqr: " << rsqr << endl;

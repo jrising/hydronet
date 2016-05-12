@@ -36,11 +36,6 @@ namespace openworld {
 
       int index = backuptime.inRange(tt);
       if (index >= 0 && index != lastindex) {
-        string infos[compare.getLatitudes().count()][compare.getLongitudes().count()];
-        for (unsigned rr = 0; rr < compare.getLatitudes().count(); rr++)
-          for (unsigned cc = 0; cc < compare.getLongitudes().count(); cc++)
-            infos[rr][cc] = compare.debugInfo(rr, cc);
-        
         GeographicMap<double>& comparison = compare[tt];
 
         cout << "SNOW COMPARE" << endl;
@@ -51,10 +46,10 @@ namespace openworld {
             Measure latitude(Inds::lat), longitude(Inds::lon);
             comparison.calcLatitudeLongitude(rr, cc, latitude, longitude);
             if (result.validLocation(latitude, longitude))
-              fs << rr << "\t" << cc << "\t" << result.getDouble(latitude, longitude) << "\t" << comparison.getCellConst(rr, cc) << "\t" << infos[rr][cc] << endl;
+              fs << rr << "\t" << cc << "\t" << result.getDouble(latitude, longitude) << "\t" << comparison.getCellConst(rr, cc) << endl;
           }
         fs.close();
-        
+
         lastindex = backuptime.inRange(tt);
       }
 
