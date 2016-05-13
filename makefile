@@ -4,7 +4,7 @@ UNAME := $(shell uname)
 
 ifeq ($(UNAME), Darwin)
 	OSARGS = -DSKIP_GETLINE
-else ifeq ($(UNAME), Ubuntu)
+else ifeq ($(UNAME), Linux)
 	OSARGS = -DSKIP_GETLINE
 else
 	OSARGS =
