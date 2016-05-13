@@ -4,6 +4,9 @@ addons:
     packages:
       - libopenmpi-dev
       - openmpi-bin
+compiler:
+  - gcc
+  
 install:
  - mkdir ~/projects/
  - git clone https://github.com/jrising/openworld.git ~/projects/openworld
