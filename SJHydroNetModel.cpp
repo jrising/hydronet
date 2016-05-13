@@ -13,6 +13,8 @@ SJHydroNetModel::SJHydroNetModel(DividedRange latitudes, DividedRange longitudes
   elevation = NULL;
   mask_coarse = NULL;
 
+  stepCallback = NULL;
+
   precipMult = 1;
   tempAdd = 0;
   snowDiff = 0;
@@ -148,8 +150,11 @@ void SJHydroNetModel::runTo(long time) {
     time_t now_time = now.getValue();
     struct tm* ptm = gmtime(&now_time);
 
+    time_t end_time = meastime.getValue();
+    struct tm* end_ptm = gmtime(&end_time);
+
     if (now.getValue() != 0)
-      cout << ptm->tm_mday << "/" << ptm->tm_mon+1 << "/" << ptm->tm_year << ": " << now << " < " << meastime << endl;
+      cout << ptm->tm_mday << "/" << ptm->tm_mon+1 << "/" << ptm->tm_year << " < " << end_ptm->tm_mday << "/" << end_ptm->tm_mon+1 << "/" << end_ptm->tm_year << endl;
 
     stepDay();
   }
