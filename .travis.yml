@@ -15,4 +15,5 @@ install:
  - git clone https://github.com/jrising/opendims.git ~/projects/opendims
 
 script:
+ - uname
  - make
