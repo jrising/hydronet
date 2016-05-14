@@ -149,14 +149,14 @@ class BhakraTest : public ModelTest {
     MultiMeasure glacierLatitudes(4, glalats, Inds::lat);
     MultiMeasure glacierLongitudes(4, glalons, Inds::lon);
     TemporalAbstractCollection<double>* glacierPrecips = TemporalAbstractCollection<double>::loadMapPoints(copy->getPrecipitation(), glacierLatitudes, glacierLongitudes);
-    TemporalAbstractCollection<double>* glacierTemps = TemporalAbstractCollection<double>::loadDelimitedPoints(copy->getTemperature().getTimes(), "glaciertemps.csv");
+    TemporalAbstractCollection<double>* glacierTemps = TemporalAbstractCollection<double>::loadDelimitedPoints(copy->getTemperature().getTimes(), "glaciertemps.tsv");
     TemporalAbstractCollection<double>* glacierCover = TemporalAbstractCollection<double>::loadConstantPoints(copy->getSnowModel().getTimes(), glasnow, 4);
     AbstractCollection<double>* glacierElevation = AbstractCollection<double>::loadMapPoints(copy->getElevation(), glacierLatitudes, glacierLongitudes);
 
     TemporalAbstractCollection<double> glacierSnowMeltHeight(Inds::unixtime), glacierSnowAccumHeight(Inds::unixtime), glacierRainRunoffHeight(Inds::unixtime),
       glacierMeltRunoffHeight(Inds::unixtime), glacierRainGroundHeight(Inds::unixtime), glacierMeltGroundHeight(Inds::unixtime), glacierDirectHeightConf(Inds::unixtime);
 
-    SJHydroNetModel::runToHeight(*glacierPrecips, *glacierTemps, *glacierCover, *glacierElevation,
+    SJHydroNetModel::runToHeight<TemporalAbstractCollection<double>, AbstractCollection<double>, AbstractCollection<bool> >(*glacierPrecips, *glacierTemps, *glacierCover, *glacierElevation,
                                  copy->meltDegreeDayFactor, copy->meltDegreeDaySlope,
                                  copy->rainRunoffCoefficient, copy->meltRunoffCoefficient,
                                  copy->groundCoefficient, copy->rainOnSnowCoefficient,
